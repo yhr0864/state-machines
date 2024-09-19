@@ -1,21 +1,21 @@
 import time
+import logging
+
 from transitions_gui import WebMachine
 from multiprocessing import shared_memory
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
 
 class Vehicle:
     states = ["stop", "moving"]
-    transitions = [
-        ["start_engine", "stop", "moving"],
-        ["brake", "moving", "stop"],
-    ]
 
     def __init__(self):
-        # Initialize the state machine for the vehicle
+        # Initialize the state machine
         self.machine = WebMachine(
             model=self,
             states=Vehicle.states,
-            transitions=Vehicle.transitions,
             initial="stop",
             name="Car",
             ignore_invalid_triggers=True,
@@ -70,16 +70,16 @@ if __name__ == "__main__":
 
             # Convert the bytes back into a string and remove null bytes
             data = data_bytes.decode("utf-8").rstrip("\x00")
-            print(f"Now is {data}")
+            logging.info(f"Now is {data}")
 
             # Transition based on the traffic light state
             action_result = car.handle_traffic_light(data)
 
             if action_result:
-                print(action_result)
+                logging.info(action_result)
 
     except KeyboardInterrupt:
-        pass
+        car.machine.stop_server()
 
     finally:
         # Clean up shared memory
