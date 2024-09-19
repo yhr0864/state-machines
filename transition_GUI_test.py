@@ -11,9 +11,9 @@ logging.basicConfig(level=logging.INFO)
 class TrafficLightStateMachine(object):
     states = ["green", "yellow", "red"]
     transitions = [
-        ["timeup", "Red", "Green"],
-        ["timeup", "Green", "Yellow"],
-        ["timeup", "Yellow", "Red"],
+        ["timeup", "red", "green"],
+        ["timeup", "green", "yellow"],
+        ["timeup", "yellow", "red"],
     ]
 
     def __init__(self):
