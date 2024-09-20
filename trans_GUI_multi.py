@@ -1,15 +1,15 @@
 import time
+import logging
+
 from transitions_gui import WebMachine  # noqa
 from multiprocessing import Process, Manager
 
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
-class TrafficLightStateMachine(object):
+
+class TrafficLightStateMachine:
     states = ["green", "yellow", "red"]
-    transitions = [
-        ["timeup", "Green", "Red"],
-        ["timeup", "Red", "Yellow"],
-        ["timeup", "Yellow", "Green"],
-    ]
 
     def __init__(self, shared_state):
         # Initialize the state machine with shared state
@@ -17,17 +17,16 @@ class TrafficLightStateMachine(object):
         self.machine = WebMachine(
             model=self,
             states=TrafficLightStateMachine.states,
-            transitions=TrafficLightStateMachine.transitions,
-            initial="green",
+            initial="red",
             name="Traffic Light",
             ignore_invalid_triggers=True,
             auto_transitions=False,
             port=8083,
         )
 
-        self.machine.add_transition(trigger="timeup", source="green", dest="red")
-        self.machine.add_transition("timeup", "red", "yellow")
-        self.machine.add_transition("timeup", "yellow", "green")
+        self.machine.add_transition(trigger="timeup", source="green", dest="yellow")
+        self.machine.add_transition(trigger="timeup", source="yellow", dest="red")
+        self.machine.add_transition(trigger="timeup", source="red", dest="green")
 
     @property
     def state(self):
@@ -45,19 +44,14 @@ class TrafficLightStateMachine(object):
         self.shared_state.value = self.state
 
 
-class Vehicle:
+class VehicleStateMachine:
     states = ["stop", "moving"]
-    transitions = [
-        ["start_engine", "stop", "moving"],
-        ["brake", "moving", "stop"],
-    ]
 
     def __init__(self):
-        # Initialize the state machine for the vehicle
+        # Initialize the state machine
         self.machine = WebMachine(
             model=self,
-            states=Vehicle.states,
-            transitions=Vehicle.transitions,
+            states=VehicleStateMachine.states,
             initial="stop",
             name="Car",
             ignore_invalid_triggers=True,
@@ -93,31 +87,32 @@ class Vehicle:
         return "Car is waiting..."
 
 
-def run_light(traffic_light):
+def run_light(shared_state):
+    traffic_light = TrafficLightStateMachine(shared_state)
     while True:
         time.sleep(2)
         traffic_light.timeup()
-        print(f"Traffic light is now: {traffic_light.state}")
+        logging.info(f"Traffic light is now: {traffic_light.state}")
 
 
-def run_car(traffic_light):
-    car = Vehicle()
+def run_car(shared_state):
+    car = VehicleStateMachine()
     while True:
         time.sleep(1)
-        action_result = car.handle_traffic_light(traffic_light.state)
+        action_result = car.handle_traffic_light(shared_state.value)
 
         if action_result:
-            print(action_result)
+            logging.info(action_result)
 
 
 if __name__ == "__main__":
     with Manager() as manager:
-        shared_state = manager.Value("s", "green")
-        traffic_light = TrafficLightStateMachine(shared_state)
+        shared_state = manager.Value("s", "red")
+        # traffic_light = TrafficLightStateMachine(shared_state)
 
         # Start processes for traffic light and vehicle logic
-        p1 = Process(target=run_light, args=(traffic_light,))
-        p2 = Process(target=run_car, args=(traffic_light,))
+        p1 = Process(target=run_light, args=(shared_state,))
+        p2 = Process(target=run_car, args=(shared_state,))
 
         p1.start()
         p2.start()
