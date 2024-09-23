@@ -1,6 +1,6 @@
 import time
 import logging
-from transitions_gui import WebMachine
+from transitions import Machine
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -18,21 +18,17 @@ class GantryStateMachine:
 
     def __init__(self):
         # Initialize the state machine
-        self.machine = WebMachine(
+        self.machine = Machine(
             model=self,
             states=GantryStateMachine.states,
             transitions=GantryStateMachine.transitions,
             initial="idle",
-            name="Gantry",
-            ignore_invalid_triggers=True,
-            auto_transitions=False,
-            port=8083,
         )
 
     # Transition methods for triggering events
     def stop(self):
         logging.info("Gantry stopping...")
-        self.stop()
+        self.trigger("stop")
 
     def event_1(self):
         logging.info("Transitioning from idle to tray_to_pump")
@@ -82,4 +78,3 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:  # Ctrl + C to stop the server
         logging.info("Stopping the server...")
-        gantry.machine.stop_server()
