@@ -6,7 +6,7 @@ from transitions_gui import WebMachine
 logging.basicConfig(level=logging.INFO)
 
 
-class TablePumpStateMachine:
+class TableMeasureStateMachine:
     states = [
         "Empty_Empty_Empty",
         "Empty_Empty_Bottle",
@@ -65,8 +65,8 @@ class TablePumpStateMachine:
         # Initialize the state machine with shared state
         self.machine = WebMachine(
             model=self,
-            states=TablePumpStateMachine.states,
-            transitions=TablePumpStateMachine.transitions,
+            states=TableMeasureStateMachine.states,
+            transitions=TableMeasureStateMachine.transitions,
             initial="Empty_Empty_Empty",
             name="Rotational Table Pump",
             ignore_invalid_triggers=True,
@@ -101,7 +101,7 @@ class TablePumpStateMachine:
 
 if __name__ == "__main__":
     # Create the table state machine
-    table = TablePumpStateMachine()
+    table = TableMeasureStateMachine()
 
     # Mapping user inputs to the respective state machine actions
     actions = {

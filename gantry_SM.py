@@ -36,23 +36,23 @@ class GantryStateMachine:
     def stop(self):
         logging.info("Gantry stopping...")
 
-    def getRequest1(self):
+    def getRequest_Tray_to_pump(self):
         logging.info("Processing request 1, transitioning from Idle to Tray_to_pump")
-        self.trigger("getRequest1")
+        self.trigger("getRequest_Tray_to_pump")
         # Simulate finishing the request
         time.sleep(1)  # Simulate some processing time
         self.finishRequest()
 
-    def getRequest2(self):
+    def getRequest_Measure_to_tray(self):
         logging.info("Processing request 2, transitioning from Idle to Measure_to_tray")
-        self.trigger("getRequest2")
+        self.trigger("getRequest_Measure_to_tray")
         # Simulate finishing the request
         time.sleep(1)  # Simulate some processing time
         self.finishRequest()
 
-    def getRequest3(self):
+    def getRequest_Pump_to_measure(self):
         logging.info("Processing request 3, transitioning from Idle to Pump_to_measure")
-        self.trigger("getRequest3")
+        self.trigger("getRequest_Pump_to_measure")
         # Simulate finishing the request
         time.sleep(1)  # Simulate some processing time
         self.finishRequest()
@@ -72,9 +72,9 @@ if __name__ == "__main__":
     # Mapping user inputs to the respective state machine actions
     actions = {
         0: gantry.stop,
-        1: gantry.getRequest1,
-        2: gantry.getRequest2,
-        3: gantry.getRequest3,
+        1: gantry.getRequest_Tray_to_pump,
+        2: gantry.getRequest_Measure_to_tray,
+        3: gantry.getRequest_Pump_to_measure,
     }
 
     try:

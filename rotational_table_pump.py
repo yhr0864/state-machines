@@ -1,10 +1,10 @@
 import time
 import logging
-from transitions_gui import WebMachine
-from multiprocessing import Process, Manager
+import serial
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
+from transitions_gui import WebMachine
+
+from utils import write_read
 
 
 class TablePumpStateMachine:
@@ -41,12 +41,6 @@ class TablePumpStateMachine:
             "dest": "BottleEmpty_BottleFull",
             # "after": "Rotate_finished",
         },
-        # {
-        #     "trigger": "Rotate_finished",
-        #     "source": "Rotating",
-        #     "dest": "BottleEmpty_BottleFull",
-        #     # "before": "Rotate_finished",
-        # },
         {
             "trigger": "Pump_to_measure_And_FillBottle",
             "source": "BottleEmpty_BottleFull",
@@ -60,6 +54,8 @@ class TablePumpStateMachine:
     ]
 
     def __init__(self):
+        self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
+
         # Initialize the state machine with shared state
         self.machine = WebMachine(
             model=self,
@@ -72,18 +68,38 @@ class TablePumpStateMachine:
             port=8083,
         )
 
+        # Map states to corresponding transitions
+        self.state_action_map = {
+            "Empty_Empty": self.Tray_to_pump,
+            "Empty_BottleEmpty": self.Rotate,
+            "BottleEmpty_Empty": self.FillBottle_And_Tray_to_pump,
+            "BottleFull_BottleEmpty": self.Rotate,
+            "BottleEmpty_BottleFull": self.Pump_to_measure_And_FillBottle,
+            "BottleFull_Empty": self.Tray_to_pump,
+        }
+
+        # Initialization
+        logging.info("Homing the table")
+
+        value = write_read(self.ser, "a")
+        if value:
+            logging.info(value)
+
+    # Send command to gantry to implement Tray_to_pump
     def Tray_to_pump(self):
         logging.info("Transitioning from tray to pump")
         self.trigger("Tray_to_pump")
 
+    # Send command to motor to implement Rotate
     def Rotate(self):
         logging.info("Rotating table")
-        self.trigger("Rotate")
 
-    # def Rotate_finished(self):
-    #     logging.info("Rotating finished")
-    #     self.trigger("Rotate_finished")
+        value = write_read(self.ser, "5")
+        if value:
+            logging.info(value)
+            self.trigger("Rotate")
 
+    # Send command to pump and gantry to simutaneously implement FillBottle_And_Tray_to_pump
     def FillBottle_And_Tray_to_pump(self):
         logging.info("Filling bottle and moving tray to pump")
         self.trigger("FillBottle_And_Tray_to_pump")
@@ -96,35 +112,32 @@ class TablePumpStateMachine:
         logging.info("Stopping the process")
         self.trigger("stop")
 
+    def auto_run(self):
+        """
+        Automatically transitions through the states with a time delay.
+        """
+        while True:
+            logging.info(f"Current state: {self.state}")
+            action = self.state_action_map.get(self.state)
+
+            if action:
+                action()  # Call the action associated with the current state
+            else:
+                logging.error(f"No action defined for state: {self.state}")
+
+            time.sleep(1)  # Delay between state transitions
+
 
 if __name__ == "__main__":
+    # Setup logging
+    logging.basicConfig(level=logging.INFO)
+
     # Create the table state machine
     table = TablePumpStateMachine()
 
-    # Mapping user inputs to the respective state machine actions
-    actions = {
-        0: table.stop,
-        1: table.Tray_to_pump,
-        2: table.Rotate,
-        3: table.FillBottle_And_Tray_to_pump,
-        4: table.Pump_to_measure_And_FillBottle,
-    }
-
     try:
-        while True:
-            # Display the options for user input
-            next_action = int(
-                input(
-                    "Please select the next command: 0-stop; 1-tray_to_pump; 2-rotate; 3-fill_bottle_and_tray_to_pump; 4-pump_to_measure_and_fill_bottle: "
-                )
-            )
-
-            # Trigger the corresponding action
-            if next_action in actions:
-                actions[next_action]()  # Call the appropriate method based on input
-                logging.info(f"Table state: {table.state}")
-            else:
-                logging.error("Invalid input! Please select a valid command.")
+        # Start automatic state transitions
+        table.auto_run()
 
     except KeyboardInterrupt:
         logging.info("Stopping the server...")
