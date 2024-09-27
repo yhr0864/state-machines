@@ -9,9 +9,21 @@ logging.basicConfig(level=logging.INFO)
 class GantryStateMachine:
     states = ["Idle", "Tray_to_pump", "Pump_to_measure", "Measure_to_tray"]
     transitions = [
-        {"trigger": "getRequest1", "source": "Idle", "dest": "Tray_to_pump"},
-        {"trigger": "getRequest2", "source": "Idle", "dest": "Measure_to_tray"},
-        {"trigger": "getRequest3", "source": "Idle", "dest": "Pump_to_measure"},
+        {
+            "trigger": "getRequest_Tray_to_pump",
+            "source": "Idle",
+            "dest": "Tray_to_pump",
+        },
+        {
+            "trigger": "getRequest_Measure_to_tray",
+            "source": "Idle",
+            "dest": "Measure_to_tray",
+        },
+        {
+            "trigger": "getRequest_Pump_to_measure",
+            "source": "Idle",
+            "dest": "Pump_to_measure",
+        },
         {
             "trigger": "finishRequest",
             "source": ["Tray_to_pump", "Measure_to_tray", "Pump_to_measure"],

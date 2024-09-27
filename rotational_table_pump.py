@@ -86,9 +86,13 @@ class TablePumpStateMachine:
             logging.info(value)
 
     # Send command to gantry to implement Tray_to_pump
-    def Tray_to_pump(self):
+    def Tray_to_pump(self, sl):
         logging.info("Transitioning from tray to pump")
-        self.trigger("Tray_to_pump")
+        # Send command
+        sl[0] = "Tray_to_pump"
+        # Receive feedback
+        if sl[1] == "finishRequest":
+            self.trigger("Tray_to_pump")
 
     # Send command to motor to implement Rotate
     def Rotate(self):
@@ -112,7 +116,7 @@ class TablePumpStateMachine:
         logging.info("Stopping the process")
         self.trigger("stop")
 
-    def auto_run(self):
+    def auto_run(self, sl):
         """
         Automatically transitions through the states with a time delay.
         """
