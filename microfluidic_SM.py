@@ -1,6 +1,7 @@
 import logging
 import time
 
+from flask import Flask, render_template_string
 from multiprocessing import Process, Manager
 from multiprocessing.managers import SharedMemoryManager
 
@@ -11,6 +12,61 @@ from gantry_SM import GantryStateMachine
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
+
+app = Flask(__name__)
+
+
+@app.route("/")
+def index():
+    return render_template_string(
+        """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Integrated Web Server</title>
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                overflow: hidden;
+                background-color: #f0f0f0;
+            }
+            .window {
+                position: absolute;
+                border: 1px solid #ccc;
+                overflow: hidden;
+                background-color: white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            iframe {
+                border: 0;
+            }
+            #window1 {
+                left: 20px;
+                top: 20px;
+                width: 45%;
+                height: 80%;
+            }
+            #window2 {
+                right: 20px;
+                top: 20px;
+                width: 45%;
+                height: 80%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="window1" class="window">
+            <iframe src="http://localhost:8083" width="100%" height="100%"></iframe>
+        </div>
+        <div id="window2" class="window">
+            <iframe src="http://localhost:8084" width="100%" height="100%"></iframe>
+        </div>
+    </body>
+    </html>
+    """
+    )
 
 
 def run_gantry(shared_list):
@@ -64,11 +120,12 @@ if __name__ == "__main__":
             p1.start()
             p2.start()
 
+            # Start the Flask server
+            app.run(host="localhost", port=8085)
+
             # Wait for both processes to complete
             p1.join()
             p2.join()
 
     except KeyboardInterrupt:
         logging.info("Stopping the server...")
-        # table.machine.stop_server()
-        # gantry.machine.stop_server()
