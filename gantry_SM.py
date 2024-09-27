@@ -31,7 +31,8 @@ class GantryStateMachine:
         },
     ]
 
-    def __init__(self):
+    def __init__(self, shared_list):
+        self.shared_list = shared_list
         # Initialize the state machine
         self.machine = WebMachine(
             model=self,
@@ -41,18 +42,28 @@ class GantryStateMachine:
             name="Gantry",
             ignore_invalid_triggers=True,
             auto_transitions=False,
-            port=8083,
+            port=8084,
         )
+
+    # @property
+    # def state(self):
+    #     # Return the state from the shared memory
+    #     return self.shared_state.value
+
+    # @state.setter
+    # def state(self, value):
+    #     # Update the state in the shared memory
+    #     self.shared_state.value = value
 
     # Transition methods for triggering events
     def stop(self):
         logging.info("Gantry stopping...")
 
     def getRequest_Tray_to_pump(self):
-        logging.info("Processing request 1, transitioning from Idle to Tray_to_pump")
+        logging.info("Get request, transitioning from Idle to Tray_to_pump")
         self.trigger("getRequest_Tray_to_pump")
         # Simulate finishing the request
-        time.sleep(1)  # Simulate some processing time
+        time.sleep(10)  # Simulate some processing time
         self.finishRequest()
 
     def getRequest_Measure_to_tray(self):
@@ -72,7 +83,11 @@ class GantryStateMachine:
     def finishRequest(self):
         # Automatically return to idle state after a request is finished
         logging.info("Gantry: Returning to Idle state automatically")
-        time.sleep(1)  # Optional delay before returning to Idle
+        time.sleep(1)
+
+        self.shared_list[0] = "waiting for command"
+        self.shared_list[1] = "finishRequest"
+
         self.trigger("finishRequest")
         logging.info(f"Gantry state after auto return: {self.state}")
 

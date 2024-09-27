@@ -53,8 +53,9 @@ class TablePumpStateMachine:
         },
     ]
 
-    def __init__(self):
-        self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
+    def __init__(self, shared_list):
+        # self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
+        self.shared_list = shared_list
 
         # Initialize the state machine with shared state
         self.machine = WebMachine(
@@ -79,29 +80,37 @@ class TablePumpStateMachine:
         }
 
         # Initialization
-        logging.info("Homing the table")
+        # logging.info("Homing the table")
 
-        value = write_read(self.ser, "a")
-        if value:
-            logging.info(value)
+        # value = write_read(self.ser, "a")
+        # if value:
+        #     logging.info(value)
 
     # Send command to gantry to implement Tray_to_pump
-    def Tray_to_pump(self, sl):
-        logging.info("Transitioning from tray to pump")
+    def Tray_to_pump(self):
+        logging.info("Send command 'tray to pump' to gantry")
         # Send command
-        sl[0] = "Tray_to_pump"
-        # Receive feedback
-        if sl[1] == "finishRequest":
-            self.trigger("Tray_to_pump")
+        self.shared_list[0] = "Tray_to_pump"
+
+        # Waiting until feedback received
+        logging.info("Waiting for Tray_to_pump")
+        while True:
+            if self.shared_list[1] == "finishRequest":
+                logging.info("Tray_to_pump finished")
+                self.trigger("Tray_to_pump")
+
+                # Reset list for next use
+                self.shared_list[1] = "waiting for feedback"
+                return
 
     # Send command to motor to implement Rotate
     def Rotate(self):
         logging.info("Rotating table")
 
-        value = write_read(self.ser, "5")
-        if value:
-            logging.info(value)
-            self.trigger("Rotate")
+        # value = write_read(self.ser, "5")
+        # if value:
+        # logging.info(value)
+        self.trigger("Rotate")
 
     # Send command to pump and gantry to simutaneously implement FillBottle_And_Tray_to_pump
     def FillBottle_And_Tray_to_pump(self):
@@ -116,12 +125,12 @@ class TablePumpStateMachine:
         logging.info("Stopping the process")
         self.trigger("stop")
 
-    def auto_run(self, sl):
+    def auto_run(self):
         """
         Automatically transitions through the states with a time delay.
         """
         while True:
-            logging.info(f"Current state: {self.state}")
+            logging.info(f"Current table state: {self.state}")
             action = self.state_action_map.get(self.state)
 
             if action:
@@ -129,7 +138,7 @@ class TablePumpStateMachine:
             else:
                 logging.error(f"No action defined for state: {self.state}")
 
-            time.sleep(1)  # Delay between state transitions
+            time.sleep(3)  # Delay between state transitions
 
 
 if __name__ == "__main__":
