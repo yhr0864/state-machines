@@ -2,9 +2,6 @@ import time
 import logging
 from transitions_gui import WebMachine
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-
 
 class GantryStateMachine:
     states = ["Idle", "Tray_to_pump", "Pump_to_measure", "Measure_to_tray"]
@@ -45,16 +42,6 @@ class GantryStateMachine:
             port=8084,
         )
 
-    # @property
-    # def state(self):
-    #     # Return the state from the shared memory
-    #     return self.shared_state.value
-
-    # @state.setter
-    # def state(self, value):
-    #     # Update the state in the shared memory
-    #     self.shared_state.value = value
-
     # Transition methods for triggering events
     def stop(self):
         logging.info("Gantry stopping...")
@@ -67,17 +54,17 @@ class GantryStateMachine:
         self.finishRequest()
 
     def getRequest_Measure_to_tray(self):
-        logging.info("Processing request 2, transitioning from Idle to Measure_to_tray")
+        logging.info("Get request, transitioning from Idle to Measure_to_tray")
         self.trigger("getRequest_Measure_to_tray")
         # Simulate finishing the request
-        time.sleep(1)  # Simulate some processing time
+        time.sleep(10)  # Simulate some processing time
         self.finishRequest()
 
     def getRequest_Pump_to_measure(self):
-        logging.info("Processing request 3, transitioning from Idle to Pump_to_measure")
+        logging.info("Get request, transitioning from Idle to Pump_to_measure")
         self.trigger("getRequest_Pump_to_measure")
         # Simulate finishing the request
-        time.sleep(1)  # Simulate some processing time
+        time.sleep(10)  # Simulate some processing time
         self.finishRequest()
 
     def finishRequest(self):
@@ -85,6 +72,7 @@ class GantryStateMachine:
         logging.info("Gantry: Returning to Idle state automatically")
         time.sleep(1)
 
+        # Reset shared list
         self.shared_list[0] = "waiting for command"
         self.shared_list[1] = "finishRequest"
 
@@ -93,6 +81,9 @@ class GantryStateMachine:
 
 
 if __name__ == "__main__":
+    # Setup logging
+    logging.basicConfig(level=logging.INFO)
+
     # Create the gantry state machine
     gantry = GantryStateMachine()
 

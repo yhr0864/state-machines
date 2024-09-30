@@ -1,6 +1,7 @@
 import time
 import logging
 import serial
+import pickle
 
 from transitions_gui import WebMachine
 
@@ -11,11 +12,11 @@ class TablePumpStateMachine:
     states = [
         "Empty_Empty",
         "Empty_BottleEmpty",
-        # "Rotating",
         "BottleEmpty_Empty",
         "BottleFull_BottleEmpty",
         "BottleEmpty_BottleFull",
         "BottleFull_Empty",
+        "Idle",
     ]
 
     transitions = [
@@ -51,6 +52,18 @@ class TablePumpStateMachine:
             "source": "BottleFull_Empty",
             "dest": "BottleFull_BottleEmpty",
         },
+        {
+            "trigger": "Stop",
+            "source": [
+                "Empty_Empty",
+                "Empty_BottleEmpty",
+                "BottleEmpty_Empty",
+                "BottleFull_BottleEmpty",
+                "BottleEmpty_BottleFull",
+                "BottleFull_Empty",
+            ],
+            "dest": "Idle",
+        },
     ]
 
     def __init__(self, shared_list):
@@ -69,6 +82,8 @@ class TablePumpStateMachine:
             port=8083,
         )
 
+        self.dump = None
+
         # Map states to corresponding transitions
         self.state_action_map = {
             "Empty_Empty": self.Tray_to_pump,
@@ -77,6 +92,7 @@ class TablePumpStateMachine:
             "BottleFull_BottleEmpty": self.Rotate,
             "BottleEmpty_BottleFull": self.Pump_to_measure_And_FillBottle,
             "BottleFull_Empty": self.Tray_to_pump,
+            "Idle": self.restore,
         }
 
         # Initialization
@@ -121,9 +137,18 @@ class TablePumpStateMachine:
         logging.info("Pumping to measure and filling bottle")
         self.trigger("Pump_to_measure_And_FillBottle")
 
-    def stop(self):
+    def Stop(self):
         logging.info("Stopping the process")
-        self.trigger("stop")
+        self.store()
+        self.trigger("Stop")
+
+    def store(self):
+        self.dump = pickle.dumps(self.machine)
+
+    def restore(self):
+        self.dump = pickle.loads(self.dump)
+        logging.info(f"Restoring the state: {self.dump.state}")
+        self.trigger(self.dump.state)
 
     def auto_run(self):
         """
