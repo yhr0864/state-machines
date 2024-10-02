@@ -10,62 +10,76 @@ from utils import write_read
 
 class TablePumpStateMachine:
     states = [
-        "Empty_Empty",
-        "Empty_BottleEmpty",
-        "BottleEmpty_Empty",
-        "BottleFull_BottleEmpty",
-        "BottleEmpty_BottleFull",
-        "BottleFull_Empty",
+        "Tray_to_pump",
+        "Rotating",
+        "FillBottle",
+        "Pump_to_measure",
         "Idle",
     ]
 
     transitions = [
         {
-            "trigger": "Tray_to_pump",
-            "source": "Empty_Empty",
-            "dest": "Empty_BottleEmpty",
-        },
-        {
-            "trigger": "Rotate",
-            "source": "Empty_BottleEmpty",
-            "dest": "BottleEmpty_Empty",
-            # "before": "Rotate_finished",
-        },
-        {
-            "trigger": "FillBottle_And_Tray_to_pump",
-            "source": "BottleEmpty_Empty",
-            "dest": "BottleFull_BottleEmpty",
-        },
-        {
-            "trigger": "Rotate",
-            "source": "BottleFull_BottleEmpty",
-            "dest": "BottleEmpty_BottleFull",
-            # "after": "Rotate_finished",
-        },
-        {
-            "trigger": "Pump_to_measure_And_FillBottle",
-            "source": "BottleEmpty_BottleFull",
-            "dest": "BottleFull_Empty",
-        },
-        {
-            "trigger": "Tray_to_pump",
-            "source": "BottleFull_Empty",
-            "dest": "BottleFull_BottleEmpty",
-        },
-        {
             "trigger": "Start",
             "source": "Idle",
-            "dest": "Empty_Empty",
+            "dest": "Tray_to_pump",
+        },
+        {
+            "trigger": "Tray_to_pump_finished",
+            "source": "Tray_to_pump",
+            "dest": "Rotating",
+        },
+        {
+            "trigger": "Rotate_finished",
+            "source": "Rotating",
+            "dest": "FillBottle",
+        },
+        {
+            "trigger": "Rotate_finished",
+            "source": "Rotating",
+            "dest": "Tray_to_pump",
+        },
+        {
+            "trigger": "FillBottle_finished",
+            "source": "FillBottle",
+            "dest": "Rotating",
+        },
+        {
+            "trigger": "Tray_to_pump_finished",
+            "source": "Tray_to_pump",
+            "dest": "Rotating",
+        },
+        {
+            "trigger": "Rotate_finished",
+            "source": "Rotating",
+            "dest": "Pump_to_measure",
+        },
+        {
+            "trigger": "Rotate_finished",
+            "source": "Rotating",
+            "dest": "FillBottle",
+        },
+        {
+            "trigger": "Pump_to_measure_finished",
+            "source": "Pump_to_measure",
+            "dest": "Tray_to_pump",
+        },
+        {
+            "trigger": "FillBottle_finished",
+            "source": "FillBottle",
+            "dest": "Tray_to_pump",
+        },
+        {
+            "trigger": "Tray_to_pump_finished",
+            "source": "Tray_to_pump",
+            "dest": "Rotating",
         },
         {
             "trigger": "Stop",
             "source": [
-                "Empty_Empty",
-                "Empty_BottleEmpty",
-                "BottleEmpty_Empty",
-                "BottleFull_BottleEmpty",
-                "BottleEmpty_BottleFull",
-                "BottleFull_Empty",
+                "Tray_to_pump",
+                "Rotating",
+                "FillBottle",
+                "Pump_to_measure",
             ],
             "dest": "Idle",
         },
