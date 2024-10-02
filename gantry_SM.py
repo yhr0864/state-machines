@@ -26,6 +26,11 @@ class GantryStateMachine:
             "source": ["Tray_to_pump", "Measure_to_tray", "Pump_to_measure"],
             "dest": "Idle",
         },
+        {
+            "trigger": "stop",
+            "source": ["Tray_to_pump", "Measure_to_tray", "Pump_to_measure"],
+            "dest": "Idle",
+        },
     ]
 
     def __init__(self, shared_list):
@@ -41,10 +46,19 @@ class GantryStateMachine:
             auto_transitions=False,
             port=8084,
         )
+        self.running = False
+
+    def start(self):
+        if not self.running:
+            self.running = True
+            logging.info("Starting the gantry.")
 
     # Transition methods for triggering events
     def stop(self):
-        logging.info("Gantry stopping...")
+        if self.running:
+            self.running = False
+            self.trigger("stop")  # Trigger transition to idle state
+            logging.info("Gantry stopping...")
 
     def getRequest_Tray_to_pump(self):
         logging.info("Get request, transitioning from Idle to Tray_to_pump")

@@ -2,9 +2,13 @@ import time
 import logging
 from transitions_gui import WebMachine
 from multiprocessing import Process, Queue, Manager
+from flask import Flask, render_template, request
+import webbrowser
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
+
+app = Flask(__name__)
 
 
 class TrafficLightStateMachine:
@@ -81,10 +85,25 @@ def auto_cycle(queue):
                 )
 
 
-def get_input(queue):
-    while True:
-        user_input = input("Enter command (0-start, 1-stop, 2-restore): ")
-        queue.put(user_input)  # Put the input into the queue
+# def get_input(queue):
+#     while True:
+#         user_input = input("Enter command (0-start, 1-stop, 2-restore): ")
+#         queue.put(user_input)  # Put the input into the queue
+
+
+# Flask routes
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/control", methods=["POST"])
+def control():
+    command = request.form.get("command")
+    if command:
+        queue.put(command)  # Put the input into the queue
+        logging.info(f"Received command from web interface: {command}")
+    return ("", 204)  # No content response
 
 
 if __name__ == "__main__":
@@ -95,8 +114,10 @@ if __name__ == "__main__":
         p1 = Process(target=auto_cycle, args=(queue,))
         p1.start()
 
+        app.run(host="localhost", port=8086)
+
         # Handle input in the main process and send it to auto_cycle via the queue
-        get_input(queue)
+        # get_input(queue)
 
         p1.join()
 

@@ -19,6 +19,10 @@
         }
         iframe {
             border: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Hide scrollbars for iframe */
+            display: block; /* Ensure no extra space is created */
         }
         #window1 {
             left: 20px;
@@ -38,45 +42,55 @@
             width: 30%;
             height: calc(90% - 40px);
         }
-        .controls {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
         button {
+            margin: 10px;
             padding: 10px 20px;
             font-size: 16px;
-            cursor: pointer;
+        }
+        #controls {
+            position: absolute;
+            left: 50%;
+            top: 70%;
+            transform: translateX(-50%); /* Adjust position to truly center */
+            z-index: 10; /* Bring controls above the iframe */
         }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <button onclick="startProcesses()">Start</button>
-        <button onclick="stopProcesses()">Stop</button>
+    <div id="controls">
+        <h3>Traffic Light Control</h3>
+        <button onclick="sendCommand('0')">Start</button>
+        <button onclick="sendCommand('1')">Stop</button>
     </div>
     <div id="window1" class="window">
-        <iframe src="http://localhost:8083" width="100%" height="100%"></iframe>
+        <iframe src="http://localhost:8083" width="100%" height="100%" scrolling="no"></iframe>
     </div>
     <div id="window2" class="window">
-        <iframe src="http://localhost:8084" width="100%" height="100%"></iframe>
+        <iframe src="http://localhost:8084" width="100%" height="100%" scrolling="no"></iframe>
     </div>
     <div id="window3" class="window">
-        <iframe src="http://localhost:8085" width="100%" height="100%"></iframe>
+        <iframe src="http://localhost:8085" width="100%" height="100%" scrolling="no"></iframe>
     </div>
 
     <script>
-        function startProcesses() {
-            fetch('/start', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => alert(data.status));
-        }
-
-        function stopProcesses() {
-            fetch('/stop', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => alert(data.status));
+        function sendCommand(command) {
+            fetch('/control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'command=' + command
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Command sent: ' + command);
+                } else {
+                    console.error('Error sending command');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+            });
         }
     </script>
 </body>

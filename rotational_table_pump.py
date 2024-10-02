@@ -53,6 +53,11 @@ class TablePumpStateMachine:
             "dest": "BottleFull_BottleEmpty",
         },
         {
+            "trigger": "Start",
+            "source": "Idle",
+            "dest": "Empty_Empty",
+        },
+        {
             "trigger": "Stop",
             "source": [
                 "Empty_Empty",
@@ -75,24 +80,26 @@ class TablePumpStateMachine:
             model=self,
             states=TablePumpStateMachine.states,
             transitions=TablePumpStateMachine.transitions,
-            initial="Empty_Empty",
-            name="Rotational Table Pump",
+            initial="Idle",
+            name="Table Pump",
             ignore_invalid_triggers=True,
             auto_transitions=False,
             port=8083,
         )
 
         self.dump = None
+        self.running = False
 
         # Map states to corresponding transitions
         self.state_action_map = {
+            "Idle": self.start,
             "Empty_Empty": self.Tray_to_pump,
             "Empty_BottleEmpty": self.Rotate,
             "BottleEmpty_Empty": self.FillBottle_And_Tray_to_pump,
             "BottleFull_BottleEmpty": self.Rotate,
             "BottleEmpty_BottleFull": self.Pump_to_measure_And_FillBottle,
             "BottleFull_Empty": self.Tray_to_pump,
-            "Idle": self.restore,
+            # "Idle": self.restore,
         }
 
         # Initialization
@@ -137,10 +144,18 @@ class TablePumpStateMachine:
         logging.info("Pumping to measure and filling bottle")
         self.trigger("Pump_to_measure_And_FillBottle")
 
-    def Stop(self):
-        logging.info("Stopping the process")
-        self.store()
-        self.trigger("Stop")
+    def start(self):
+        if not self.running:
+            self.running = True
+            logging.info("Starting the rotational table at pump.")
+            self.trigger("Start")
+
+    def stop(self):
+        if self.running:
+            self.running = False
+            logging.info("Stopping the process")
+            # self.store()
+            self.trigger("Stop")
 
     def store(self):
         self.dump = pickle.dumps(self.machine)
@@ -150,20 +165,37 @@ class TablePumpStateMachine:
         logging.info(f"Restoring the state: {self.dump.state}")
         self.trigger(self.dump.state)
 
-    def auto_run(self):
+    def auto_run(self, queue):
         """
         Automatically transitions through the states with a time delay.
         """
+        commands = {
+            "0": self.start,
+            "1": self.stop,
+            "2": self.restore,
+        }
         while True:
-            logging.info(f"Current table state: {self.state}")
-            action = self.state_action_map.get(self.state)
+            if not queue.empty():  # Check if there's any input in the queue
+                user_input = queue.get()  # Get the input from the queue
+                if user_input in commands:
+                    commands[user_input]()
+                    logging.info(
+                        f"Received command {user_input}. Table_pump state: {self.state}"
+                    )
+                else:
+                    logging.warning(f"Invalid command: {user_input}")
 
-            if action:
-                action()  # Call the action associated with the current state
             else:
-                logging.error(f"No action defined for state: {self.state}")
+                if self.running:
+                    logging.info(f"Current table state: {self.state}")
+                    action = self.state_action_map.get(self.state)
 
-            time.sleep(3)  # Delay between state transitions
+                    if action:
+                        action()  # Call the action associated with the current state
+                    else:
+                        logging.error(f"No action defined for state: {self.state}")
+
+                    time.sleep(3)  # Delay between state transitions
 
 
 if __name__ == "__main__":

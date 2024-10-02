@@ -16,6 +16,7 @@ class TableMeasureStateMachine:
         "BottleM1_BottleM2_Bottle",
         "Bottle_BottleM1_BottleM2",
         "BottleM1_BottleM2_Empty",
+        "Idle",
     ]
 
     transitions = [
@@ -59,6 +60,25 @@ class TableMeasureStateMachine:
             "source": "BottleM1_BottleM2_Empty",
             "dest": "BottleM1_BottleM2_Bottle",
         },
+        {
+            "trigger": "Start",
+            "source": "Idle",
+            "dest": "Empty_Empty_Empty",
+        },
+        {
+            "trigger": "Stop",
+            "source": [
+                "Empty_Empty_Empty",
+                "Empty_Empty_Bottle",
+                "Bottle_Empty_Empty",
+                "BottleM1_Empty_Bottle",
+                "Bottle_BottleM1_Empty",
+                "BottleM1_BottleM2_Bottle",
+                "Bottle_BottleM1_BottleM2",
+                "BottleM1_BottleM2_Empty",
+            ],
+            "dest": "Idle",
+        },
     ]
 
     def __init__(self, shared_list):
@@ -68,15 +88,18 @@ class TableMeasureStateMachine:
             model=self,
             states=TableMeasureStateMachine.states,
             transitions=TableMeasureStateMachine.transitions,
-            initial="Empty_Empty_Empty",
-            name="Rotational Table Pump",
+            initial="Idle",
+            name="Table Measure",
             ignore_invalid_triggers=True,
             auto_transitions=False,
             port=8085,
         )
 
+        self.running = False
+
         # Map states to corresponding transitions
         self.state_action_map = {
+            "Idle": self.start,
             "Empty_Empty_Empty": self.Pump_to_measure,
             "Empty_Empty_Bottle": self.Rotate,
             "Bottle_Empty_Empty": self.UV_Measure_And_Pump_to_measure,
@@ -107,24 +130,48 @@ class TableMeasureStateMachine:
         logging.info("Measuring with UV and DLS and moving from measure to tray")
         self.trigger("Measure_to_tray_And_UV_measure_And_DLS_measure")
 
-    def stop(self):
-        logging.info("Stopping the process")
-        self.trigger("stop")
+    def start(self):
+        if not self.running:
+            self.running = True
+            logging.info("Starting the rotational table at measure.")
+            self.trigger("Start")
 
-    def auto_run(self):
+    def stop(self):
+        if self.running:
+            self.running = False
+            logging.info("Stopping the process")
+            self.trigger("Stop")
+
+    def auto_run(self, queue):
         """
         Automatically transitions through the states with a time delay.
         """
+        commands = {
+            "0": self.start,
+            "1": self.stop,
+        }
         while True:
-            logging.info(f"Current table state: {self.state}")
-            action = self.state_action_map.get(self.state)
+            if not queue.empty():  # Check if there's any input in the queue
+                user_input = queue.get()  # Get the input from the queue
+                if user_input in commands:
+                    commands[user_input]()
+                    logging.info(
+                        f"Received command {user_input}. Table_measure state: {self.state}"
+                    )
+                else:
+                    logging.warning(f"Invalid command: {user_input}")
 
-            if action:
-                action()  # Call the action associated with the current state
             else:
-                logging.error(f"No action defined for state: {self.state}")
+                if self.running:
+                    logging.info(f"Current table state: {self.state}")
+                    action = self.state_action_map.get(self.state)
 
-            time.sleep(1)  # Delay between state transitions
+                    if action:
+                        action()  # Call the action associated with the current state
+                    else:
+                        logging.error(f"No action defined for state: {self.state}")
+
+                    time.sleep(1)  # Delay between state transitions
 
 
 if __name__ == "__main__":
