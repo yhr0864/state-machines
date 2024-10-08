@@ -64,21 +64,21 @@ class GantryStateMachine:
         logging.info("Get request, transitioning from Idle to Tray_to_pump")
         self.trigger("getRequest_Tray_to_pump")
         # Simulate finishing the request
-        time.sleep(10)  # Simulate some processing time
+        time.sleep(3)  # Simulate some processing time
         self.finishRequest()
 
     def getRequest_Measure_to_tray(self):
         logging.info("Get request, transitioning from Idle to Measure_to_tray")
         self.trigger("getRequest_Measure_to_tray")
         # Simulate finishing the request
-        time.sleep(10)  # Simulate some processing time
+        time.sleep(3)  # Simulate some processing time
         self.finishRequest()
 
     def getRequest_Pump_to_measure(self):
         logging.info("Get request, transitioning from Idle to Pump_to_measure")
         self.trigger("getRequest_Pump_to_measure")
         # Simulate finishing the request
-        time.sleep(10)  # Simulate some processing time
+        time.sleep(3)  # Simulate some processing time
         self.finishRequest()
 
     def finishRequest(self):

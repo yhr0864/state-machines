@@ -2,87 +2,85 @@ import time
 import logging
 from transitions_gui import WebMachine
 
+from utils import (
+    state_rotate_120,
+    state_pump_to_measure,
+    state_pump_to_measure_UV,
+    state_pump_to_measure_UV_DLS,
+    state_measure_to_tray_UV_DLS,
+)
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 
 class TableMeasureStateMachine:
     states = [
-        "Empty_Empty_Empty",
-        "Empty_Empty_Bottle",
-        "Bottle_Empty_Empty",
-        "BottleM1_Empty_Bottle",
-        "Bottle_BottleM1_Empty",
-        "BottleM1_BottleM2_Bottle",
-        "Bottle_BottleM1_BottleM2",
-        "BottleM1_BottleM2_Empty",
+        "Pump_to_measure",
+        "Rotating",
+        "Pump_to_measure_and_UV",
+        "Pump_to_measure_and_UV_and_DLS",
+        "Measure_to_tray_and_UV_and_DLS",
         "Idle",
     ]
 
     transitions = [
         {
-            "trigger": "Pump_to_measure",
-            "source": "Empty_Empty_Empty",
-            "dest": "Empty_Empty_Bottle",
-        },
-        {
-            "trigger": "Rotate",
-            "source": "Empty_Empty_Bottle",
-            "dest": "Bottle_Empty_Empty",
-        },
-        {
-            "trigger": "UV_Measure_And_Pump_to_measure",
-            "source": "Bottle_Empty_Empty",
-            "dest": "BottleM1_Empty_Bottle",
-        },
-        {
-            "trigger": "Rotate",
-            "source": "BottleM1_Empty_Bottle",
-            "dest": "Bottle_BottleM1_Empty",
-        },
-        {
-            "trigger": "Pump_to_measure_And_UV_measure_And_DLS_measure",
-            "source": "Bottle_BottleM1_Empty",
-            "dest": "BottleM1_BottleM2_Bottle",
-        },
-        {
-            "trigger": "Rotate",
-            "source": "BottleM1_BottleM2_Bottle",
-            "dest": "Bottle_BottleM1_BottleM2",
-        },
-        {
-            "trigger": "Measure_to_tray_And_UV_measure_And_DLS_measure",
-            "source": "Bottle_BottleM1_BottleM2",
-            "dest": "BottleM1_BottleM2_Empty",
-        },
-        {
-            "trigger": "Pump_to_measure",
-            "source": "BottleM1_BottleM2_Empty",
-            "dest": "BottleM1_BottleM2_Bottle",
-        },
-        {
             "trigger": "Start",
             "source": "Idle",
-            "dest": "Empty_Empty_Empty",
+            "dest": "Pump_to_measure",
+        },
+        {
+            "trigger": "Pump_to_measure_finished",
+            "source": "Pump_to_measure",
+            "dest": "Rotating",
+        },
+        {
+            "trigger": "Bottle_Empty_Empty",
+            "source": "Rotating",
+            "dest": "Pump_to_measure_and_UV",
+        },
+        {
+            "trigger": "BottleM1_Empty_Bottle",
+            "source": "Pump_to_measure_and_UV",
+            "dest": "Rotating",
+        },
+        {
+            "trigger": "Bottle_BottleM1_Empty",
+            "source": "Rotating",
+            "dest": "Pump_to_measure_and_UV_and_DLS",
+        },
+        {
+            "trigger": "BottleM1_BottleM2_Bottle",
+            "source": "Pump_to_measure_and_UV_and_DLS",
+            "dest": "Rotating",
+        },
+        {
+            "trigger": "Bottle_BottleM1_BottleM2",
+            "source": "Rotating",
+            "dest": "Measure_to_tray_and_UV_and_DLS",
+        },
+        {
+            "trigger": "BottleM1_BottleM2_Empty",
+            "source": "Measure_to_tray_and_UV_and_DLS",
+            "dest": "Pump_to_measure",
         },
         {
             "trigger": "Stop",
             "source": [
-                "Empty_Empty_Empty",
-                "Empty_Empty_Bottle",
-                "Bottle_Empty_Empty",
-                "BottleM1_Empty_Bottle",
-                "Bottle_BottleM1_Empty",
-                "BottleM1_BottleM2_Bottle",
-                "Bottle_BottleM1_BottleM2",
-                "BottleM1_BottleM2_Empty",
+                "Pump_to_measure",
+                "Rotating",
+                "Pump_to_measure_and_UV",
+                "Pump_to_measure_and_UV_and_DLS",
+                "Measure_to_tray_and_UV_and_DLS",
             ],
             "dest": "Idle",
         },
     ]
 
     def __init__(self, shared_list):
-        self.shared_list = shared_list
+        # self.shared_list = shared_list
+
         # Initialize the state machine with shared state
         self.machine = WebMachine(
             model=self,
@@ -95,40 +93,61 @@ class TableMeasureStateMachine:
             port=8085,
         )
 
+        self.table_state = "Empty_Empty_Empty"
         self.running = False
 
         # Map states to corresponding transitions
         self.state_action_map = {
             "Idle": self.start,
-            "Empty_Empty_Empty": self.Pump_to_measure,
-            "Empty_Empty_Bottle": self.Rotate,
-            "Bottle_Empty_Empty": self.UV_Measure_And_Pump_to_measure,
-            "BottleM1_Empty_Bottle": self.Rotate,
-            "Bottle_BottleM1_Empty": self.Pump_to_measure_And_UV_measure_And_DLS_measure,
-            "BottleM1_BottleM2_Bottle": self.Rotate,
-            "Bottle_BottleM1_BottleM2": self.Measure_to_tray_And_UV_measure_And_DLS_measure,
-            "BottleM1_BottleM2_Empty": self.Pump_to_measure,
+            "Pump_to_measure": self.Pump_to_measure,
+            "Rotating": self.Rotate,
+            "Pump_to_measure_and_UV": self.Pump_to_measure_and_UV,
+            "Pump_to_measure_and_UV_and_DLS": self.Pump_to_measure_and_UV_and_DLS,
+            "Measure_to_tray_and_UV_and_DLS": self.Measure_to_tray_and_UV_and_DLS,
         }
 
     def Rotate(self):
         logging.info("Rotating table")
-        self.trigger("Rotate")
+        logging.info(self.table_state)
+
+        self.table_state = state_rotate_120(self.table_state)
+        self.trigger(self.table_state)
 
     def Pump_to_measure(self):
-        logging.info("Transitioning from pump to measure")
-        self.trigger("Pump_to_measure")
+        logging.info("Send command 'pump to measure' to gantry")
 
-    def UV_Measure_And_Pump_to_measure(self):
+        # Send command
+        # self.shared_list[0] = "Pump_to_measure"
+
+        # Waiting until feedback received
+        logging.info("Waiting for Pump_to_measure")
+        # while True:
+        #     if self.shared_list[1] == "finishRequest":
+        logging.info("Pump_to_measure finished")
+        self.table_state = state_pump_to_measure(self.table_state)
+        self.trigger("Pump_to_measure_finished")
+
+        # Reset list for next use
+        # self.shared_list[1] = "waiting for feedback"
+        return
+
+    def Pump_to_measure_and_UV(self):
         logging.info("Measuring with UV and moving from pump to measure")
-        self.trigger("UV_Measure_And_Pump_to_measure")
 
-    def Pump_to_measure_And_UV_measure_And_DLS_measure(self):
+        self.table_state = state_pump_to_measure_UV(self.table_state)
+        self.trigger(self.table_state)
+
+    def Pump_to_measure_and_UV_and_DLS(self):
         logging.info("Measuring with UV and DLS and moving from pump to measure")
-        self.trigger("Pump_to_measure_And_UV_measure_And_DLS_measure")
 
-    def Measure_to_tray_And_UV_measure_And_DLS_measure(self):
+        self.table_state = state_pump_to_measure_UV_DLS(self.table_state)
+        self.trigger(self.table_state)
+
+    def Measure_to_tray_and_UV_and_DLS(self):
         logging.info("Measuring with UV and DLS and moving from measure to tray")
-        self.trigger("Measure_to_tray_And_UV_measure_And_DLS_measure")
+
+        self.table_state = state_measure_to_tray_UV_DLS(self.table_state)
+        self.trigger(self.table_state)
 
     def start(self):
         if not self.running:
@@ -171,7 +190,7 @@ class TableMeasureStateMachine:
                     else:
                         logging.error(f"No action defined for state: {self.state}")
 
-                    time.sleep(1)  # Delay between state transitions
+                    time.sleep(2)  # Delay between state transitions
 
 
 if __name__ == "__main__":

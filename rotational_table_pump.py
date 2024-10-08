@@ -5,15 +5,21 @@ import pickle
 
 from transitions_gui import WebMachine
 
-from utils import write_read
+from utils import (
+    write_read,
+    state_rotate,
+    state_tray_to_pump,
+    state_FillBottle_and_TraytoPump,
+    state_FillBottle_and_PumptoMeasure,
+)
 
 
 class TablePumpStateMachine:
     states = [
         "Tray_to_pump",
         "Rotating",
-        "FillBottle",
-        "Pump_to_measure",
+        "FillBottle_and_TraytoPump",
+        "FillBottle_and_PumptoMeasure",
         "Idle",
     ]
 
@@ -29,57 +35,32 @@ class TablePumpStateMachine:
             "dest": "Rotating",
         },
         {
-            "trigger": "Rotate_finished",
+            "trigger": "BottleEmpty_Empty",
             "source": "Rotating",
-            "dest": "FillBottle",
+            "dest": "FillBottle_and_TraytoPump",
         },
         {
-            "trigger": "Rotate_finished",
-            "source": "Rotating",
-            "dest": "Tray_to_pump",
-        },
-        {
-            "trigger": "FillBottle_finished",
-            "source": "FillBottle",
+            "trigger": "BottleFull_BottleEmpty",
+            "source": "FillBottle_and_TraytoPump",
             "dest": "Rotating",
         },
         {
-            "trigger": "Tray_to_pump_finished",
-            "source": "Tray_to_pump",
-            "dest": "Rotating",
-        },
-        {
-            "trigger": "Rotate_finished",
+            "trigger": "BottleEmpty_BottleFull",
             "source": "Rotating",
-            "dest": "Pump_to_measure",
+            "dest": "FillBottle_and_PumptoMeasure",
         },
         {
-            "trigger": "Rotate_finished",
-            "source": "Rotating",
-            "dest": "FillBottle",
-        },
-        {
-            "trigger": "Pump_to_measure_finished",
-            "source": "Pump_to_measure",
+            "trigger": "BottleFull_Empty",
+            "source": "FillBottle_and_PumptoMeasure",
             "dest": "Tray_to_pump",
-        },
-        {
-            "trigger": "FillBottle_finished",
-            "source": "FillBottle",
-            "dest": "Tray_to_pump",
-        },
-        {
-            "trigger": "Tray_to_pump_finished",
-            "source": "Tray_to_pump",
-            "dest": "Rotating",
         },
         {
             "trigger": "Stop",
             "source": [
                 "Tray_to_pump",
                 "Rotating",
-                "FillBottle",
-                "Pump_to_measure",
+                "FillBottle_and_TraytoPump",
+                "FillBottle_and_PumptoMeasure",
             ],
             "dest": "Idle",
         },
@@ -101,18 +82,17 @@ class TablePumpStateMachine:
             port=8083,
         )
 
+        self.table_state = "Empty_Empty"
         self.dump = None
         self.running = False
 
         # Map states to corresponding transitions
         self.state_action_map = {
             "Idle": self.start,
-            "Empty_Empty": self.Tray_to_pump,
-            "Empty_BottleEmpty": self.Rotate,
-            "BottleEmpty_Empty": self.FillBottle_And_Tray_to_pump,
-            "BottleFull_BottleEmpty": self.Rotate,
-            "BottleEmpty_BottleFull": self.Pump_to_measure_And_FillBottle,
-            "BottleFull_Empty": self.Tray_to_pump,
+            "Tray_to_pump": self.Tray_to_pump,
+            "Rotating": self.Rotate,
+            "FillBottle_and_TraytoPump": self.FillBottle_and_TraytoPump,
+            "FillBottle_and_PumptoMeasure": self.FillBottle_and_PumptoMeasure,
             # "Idle": self.restore,
         }
 
@@ -126,6 +106,7 @@ class TablePumpStateMachine:
     # Send command to gantry to implement Tray_to_pump
     def Tray_to_pump(self):
         logging.info("Send command 'tray to pump' to gantry")
+
         # Send command
         self.shared_list[0] = "Tray_to_pump"
 
@@ -134,7 +115,8 @@ class TablePumpStateMachine:
         while True:
             if self.shared_list[1] == "finishRequest":
                 logging.info("Tray_to_pump finished")
-                self.trigger("Tray_to_pump")
+                self.table_state = state_tray_to_pump(self.table_state)
+                self.trigger("Tray_to_pump_finished")
 
                 # Reset list for next use
                 self.shared_list[1] = "waiting for feedback"
@@ -147,16 +129,19 @@ class TablePumpStateMachine:
         # value = write_read(self.ser, "5")
         # if value:
         # logging.info(value)
-        self.trigger("Rotate")
+        self.table_state = state_rotate(self.table_state)
+        self.trigger(self.table_state)
 
     # Send command to pump and gantry to simutaneously implement FillBottle_And_Tray_to_pump
-    def FillBottle_And_Tray_to_pump(self):
+    def FillBottle_and_TraytoPump(self):
         logging.info("Filling bottle and moving tray to pump")
-        self.trigger("FillBottle_And_Tray_to_pump")
+        self.table_state = state_FillBottle_and_TraytoPump(self.table_state)
+        self.trigger(self.table_state)
 
-    def Pump_to_measure_And_FillBottle(self):
+    def FillBottle_and_PumptoMeasure(self):
         logging.info("Pumping to measure and filling bottle")
-        self.trigger("Pump_to_measure_And_FillBottle")
+        self.table_state = state_FillBottle_and_PumptoMeasure(self.table_state)
+        self.trigger(self.table_state)
 
     def start(self):
         if not self.running:
@@ -209,7 +194,7 @@ class TablePumpStateMachine:
                     else:
                         logging.error(f"No action defined for state: {self.state}")
 
-                    time.sleep(3)  # Delay between state transitions
+                    time.sleep(2)  # Delay between state transitions
 
 
 if __name__ == "__main__":

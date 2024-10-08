@@ -68,8 +68,10 @@ def run_gantry(shared_list, queue):
             else:
                 if gantry.running:
                     # Display the options for user input
+                    # next_actions = gantry.shared_list
                     next_action = gantry.shared_list[0]
 
+                    # print(next_actions)
                     # Trigger the corresponding action
                     if next_action in actions:
                         actions[next_action]()
