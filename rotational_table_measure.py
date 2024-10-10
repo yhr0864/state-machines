@@ -78,8 +78,9 @@ class TableMeasureStateMachine:
         },
     ]
 
-    def __init__(self, shared_list):
-        # self.shared_list = shared_list
+    def __init__(self, shared_list, request_q):
+        self.shared_list = shared_list
+        self.request_q = request_q
 
         # Initialize the state machine with shared state
         self.machine = WebMachine(
@@ -107,44 +108,44 @@ class TableMeasureStateMachine:
         }
 
     def Rotate(self):
-        logging.info("Rotating table")
-        logging.info(self.table_state)
+        # logging.info("Rotating table")
+        # logging.info(self.table_state)
 
         self.table_state = state_rotate_120(self.table_state)
         self.trigger(self.table_state)
 
     def Pump_to_measure(self):
-        logging.info("Send command 'pump to measure' to gantry")
+        # logging.info("Send command 'pump to measure' to gantry")
 
         # Send command
-        # self.shared_list[0] = "Pump_to_measure"
+        self.request_q.put("Pump_to_measure")
 
         # Waiting until feedback received
-        logging.info("Waiting for Pump_to_measure")
-        # while True:
-        #     if self.shared_list[1] == "finishRequest":
-        logging.info("Pump_to_measure finished")
-        self.table_state = state_pump_to_measure(self.table_state)
-        self.trigger("Pump_to_measure_finished")
+        # logging.info("Waiting for Pump_to_measure")
+        while True:
+            if self.shared_list[1]:
+                # logging.info("Pump_to_measure finished")
+                self.table_state = state_pump_to_measure(self.table_state)
+                self.trigger("Pump_to_measure_finished")
 
-        # Reset list for next use
-        # self.shared_list[1] = "waiting for feedback"
-        return
+                # Reset list for next use
+                self.shared_list[1] = False
+                return
 
     def Pump_to_measure_and_UV(self):
-        logging.info("Measuring with UV and moving from pump to measure")
+        # logging.info("Measuring with UV and moving from pump to measure")
 
         self.table_state = state_pump_to_measure_UV(self.table_state)
         self.trigger(self.table_state)
 
     def Pump_to_measure_and_UV_and_DLS(self):
-        logging.info("Measuring with UV and DLS and moving from pump to measure")
+        # logging.info("Measuring with UV and DLS and moving from pump to measure")
 
         self.table_state = state_pump_to_measure_UV_DLS(self.table_state)
         self.trigger(self.table_state)
 
     def Measure_to_tray_and_UV_and_DLS(self):
-        logging.info("Measuring with UV and DLS and moving from measure to tray")
+        # logging.info("Measuring with UV and DLS and moving from measure to tray")
 
         self.table_state = state_measure_to_tray_UV_DLS(self.table_state)
         self.trigger(self.table_state)
@@ -152,13 +153,13 @@ class TableMeasureStateMachine:
     def start(self):
         if not self.running:
             self.running = True
-            logging.info("Starting the rotational table at measure.")
+            # logging.info("Starting the rotational table at measure.")
             self.trigger("Start")
 
     def stop(self):
         if self.running:
             self.running = False
-            logging.info("Stopping the process")
+            # logging.info("Stopping the process")
             self.trigger("Stop")
 
     def auto_run(self, queue):
@@ -174,15 +175,15 @@ class TableMeasureStateMachine:
                 user_input = queue.get()  # Get the input from the queue
                 if user_input in commands:
                     commands[user_input]()
-                    logging.info(
-                        f"Received command {user_input}. Table_measure state: {self.state}"
-                    )
+                    # logging.info(
+                    #     f"Received command {user_input}. Table_measure state: {self.state}"
+                    # )
                 else:
                     logging.warning(f"Invalid command: {user_input}")
 
             else:
                 if self.running:
-                    logging.info(f"Current table state: {self.state}")
+                    # logging.info(f"Current table state: {self.state}")
                     action = self.state_action_map.get(self.state)
 
                     if action:

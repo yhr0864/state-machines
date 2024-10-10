@@ -66,9 +66,10 @@ class TablePumpStateMachine:
         },
     ]
 
-    def __init__(self, shared_list):
+    def __init__(self, shared_list, request_q):
         # self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
         self.shared_list = shared_list
+        self.request_q = request_q
 
         # Initialize the state machine with shared state
         self.machine = WebMachine(
@@ -108,18 +109,18 @@ class TablePumpStateMachine:
         logging.info("Send command 'tray to pump' to gantry")
 
         # Send command
-        self.shared_list[0] = "Tray_to_pump"
+        self.request_q.put("Tray_to_pump")
 
         # Waiting until feedback received
         logging.info("Waiting for Tray_to_pump")
         while True:
-            if self.shared_list[1] == "finishRequest":
+            if self.shared_list[0]:
                 logging.info("Tray_to_pump finished")
                 self.table_state = state_tray_to_pump(self.table_state)
                 self.trigger("Tray_to_pump_finished")
 
                 # Reset list for next use
-                self.shared_list[1] = "waiting for feedback"
+                self.shared_list[0] = False
                 return
 
     # Send command to motor to implement Rotate
@@ -190,11 +191,11 @@ class TablePumpStateMachine:
                     action = self.state_action_map.get(self.state)
 
                     if action:
-                        action()  # Call the action associated with the current state
+                        action()
                     else:
                         logging.error(f"No action defined for state: {self.state}")
 
-                    time.sleep(2)  # Delay between state transitions
+                    time.sleep(2)
 
 
 if __name__ == "__main__":

@@ -41,52 +41,21 @@ def control():
     return ("", 204)
 
 
-def run_gantry(shared_list, queue):
+def run_gantry(shared_list, queue, request_q):
     gantry = GantryStateMachine(shared_list)
-    # Mapping user inputs to the respective state machine actions
-    actions = {
-        "Tray_to_pump": gantry.getRequest_Tray_to_pump,
-        "Measure_to_tray": gantry.getRequest_Measure_to_tray,
-        "Pump_to_measure": gantry.getRequest_Pump_to_measure,
-    }
-    commands = {
-        "0": gantry.start,
-        "1": gantry.stop,
-    }
 
     try:
-        while True:
-            if not queue.empty():  # Check if there's any input in the queue
-                user_input = queue.get()  # Get the input from the queue
-                if user_input in commands:
-                    commands[user_input]()
-                    logging.info(
-                        f"Received command {user_input}. Gantry state: {gantry.state}"
-                    )
-                else:
-                    logging.warning(f"Invalid command: {user_input}")
-            else:
-                if gantry.running:
-                    # Display the options for user input
-                    # next_actions = gantry.shared_list
-                    next_action = gantry.shared_list[0]
+        gantry.auto_run(queue, request_q)
 
-                    # print(next_actions)
-                    # Trigger the corresponding action
-                    if next_action in actions:
-                        actions[next_action]()
-                        logging.info(f"Gantry state: {gantry.state}")
-
-    except KeyboardInterrupt:  # Ctrl + C to stop the server
+    except KeyboardInterrupt:
         logging.info("Stopping the server...")
         gantry.machine.stop_server()
 
 
-def run_table_pump(shared_list, queue):
-    table = TablePumpStateMachine(shared_list)
+def run_table_pump(shared_list, queue, request_q):
+    table = TablePumpStateMachine(shared_list, request_q)
 
     try:
-        # Start automatic state transitions
         table.auto_run(queue)
 
     except KeyboardInterrupt:
@@ -94,11 +63,10 @@ def run_table_pump(shared_list, queue):
         table.machine.stop_server()
 
 
-def run_table_measure(shared_list, queue):
-    table = TableMeasureStateMachine(shared_list)
+def run_table_measure(shared_list, queue, request_q):
+    table = TableMeasureStateMachine(shared_list, request_q)
 
     try:
-        # Start automatic state transitions
         table.auto_run(queue)
 
     except KeyboardInterrupt:
@@ -111,31 +79,24 @@ if __name__ == "__main__":
     queue_gantry = Queue()
     queue_measure = Queue()
 
+    request_queue = Queue()
+
     with Manager() as manager:
-        # Define shared list sl = ["command", "feedback"]
-        sl = manager.list(["waiting for command", "waiting for feedback"])
+        # Define shared bool = False means not finished
+        shared_list = manager.list([False, False, False])
 
         # Start automatic state transitions
         p1 = Process(
             target=run_table_pump,
-            args=(
-                sl,
-                queue_pump,
-            ),
+            args=(shared_list, queue_pump, request_queue),
         )
         p2 = Process(
             target=run_gantry,
-            args=(
-                sl,
-                queue_gantry,
-            ),
+            args=(shared_list, queue_gantry, request_queue),
         )
         p3 = Process(
             target=run_table_measure,
-            args=(
-                sl,
-                queue_measure,
-            ),
+            args=(shared_list, queue_measure, request_queue),
         )
 
         p1.start()

@@ -35,6 +35,7 @@ class GantryStateMachine:
 
     def __init__(self, shared_list):
         self.shared_list = shared_list
+
         # Initialize the state machine
         self.machine = WebMachine(
             model=self,
@@ -47,6 +48,12 @@ class GantryStateMachine:
             port=8084,
         )
         self.running = False
+
+        self.state_action_map = {
+            "Tray_to_pump": self.getRequest_Tray_to_pump,
+            "Measure_to_tray": self.getRequest_Measure_to_tray,
+            "Pump_to_measure": self.getRequest_Pump_to_measure,
+        }
 
     def start(self):
         if not self.running:
@@ -65,33 +72,61 @@ class GantryStateMachine:
         self.trigger("getRequest_Tray_to_pump")
         # Simulate finishing the request
         time.sleep(3)  # Simulate some processing time
-        self.finishRequest()
+        self.finishRequest(0)
 
     def getRequest_Measure_to_tray(self):
         logging.info("Get request, transitioning from Idle to Measure_to_tray")
         self.trigger("getRequest_Measure_to_tray")
         # Simulate finishing the request
         time.sleep(3)  # Simulate some processing time
-        self.finishRequest()
+        self.finishRequest(2)
 
     def getRequest_Pump_to_measure(self):
         logging.info("Get request, transitioning from Idle to Pump_to_measure")
         self.trigger("getRequest_Pump_to_measure")
         # Simulate finishing the request
         time.sleep(3)  # Simulate some processing time
-        self.finishRequest()
+        self.finishRequest(1)
 
-    def finishRequest(self):
+    def finishRequest(self, list_index):
         # Automatically return to idle state after a request is finished
         logging.info("Gantry: Returning to Idle state automatically")
         time.sleep(1)
 
         # Reset shared list
-        self.shared_list[0] = "waiting for command"
-        self.shared_list[1] = "finishRequest"
+        self.shared_list[list_index] = True
 
         self.trigger("finishRequest")
         logging.info(f"Gantry state after auto return: {self.state}")
+
+    def auto_run(self, queue, request_q):
+
+        input_commands = {
+            "0": self.start,
+            "1": self.stop,
+        }
+        while True:
+            if not queue.empty():  # Check if there's any input in the queue
+                user_input = queue.get()  # Get the input from the queue
+                if user_input in input_commands:
+                    input_commands[user_input]()
+                    logging.info(
+                        f"Received user command {user_input}. Gantry state: {self.state}"
+                    )
+                else:
+                    logging.warning(f"Invalid command: {user_input}")
+            else:
+                if self.running:
+                    if not request_q.empty():
+                        request = request_q.get()  # Get the request from the queue
+                        action = self.state_action_map.get(request)
+
+                        if action:
+                            action()
+                        else:
+                            logging.error(f"No action defined for request: {request}")
+
+                        time.sleep(2)
 
 
 if __name__ == "__main__":
