@@ -70,9 +70,16 @@ class GantryStateMachine:
     def getRequest_Tray_to_pump(self):
         logging.info("Get request, transitioning from Idle to Tray_to_pump")
         self.trigger("getRequest_Tray_to_pump")
-        # Simulate finishing the request
-        time.sleep(3)  # Simulate some processing time
-        self.finishRequest(0)
+
+        # tray_to_pump() executes
+
+        # Step 1. check if conditions are fulfilled, otherwise waiting...
+        while not timeout:
+            # To ensure the right slot of table is empty and the bottle on tray is ready as well...
+            if table_m.state[1] == "empty":
+                time.sleep(3)  # Simulate some processing time
+                self.finishRequest(0)
+                break
 
     def getRequest_Measure_to_tray(self):
         logging.info("Get request, transitioning from Idle to Measure_to_tray")
