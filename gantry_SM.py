@@ -33,8 +33,9 @@ class GantryStateMachine:
         },
     ]
 
-    def __init__(self, shared_list):
+    def __init__(self, shared_list, shared_dict):
         self.shared_list = shared_list
+        self.shared_dict = shared_dict
 
         # Initialize the state machine
         self.machine = WebMachine(
@@ -67,33 +68,56 @@ class GantryStateMachine:
             self.trigger("stop")  # Trigger transition to idle state
             logging.info("Gantry stopping...")
 
-    def getRequest_Tray_to_pump(self):
+    def getRequest_Tray_to_pump(self, timeout=5):
         logging.info("Get request, transitioning from Idle to Tray_to_pump")
         self.trigger("getRequest_Tray_to_pump")
 
         # tray_to_pump() executes
-
+        start_time = time.time()
         # Step 1. check if conditions are fulfilled, otherwise waiting...
-        while not timeout:
-            # To ensure the right slot of table is empty and the bottle on tray is ready as well...
-            if table_m.state[1] == "empty":
+        while (time.time() - start_time) < timeout:
+            # To ensure the right slot of table_p is empty and the bottle on tray is ready as well...
+            if self.shared_dict["table_p"].split("_")[-1] == "Empty":
                 time.sleep(3)  # Simulate some processing time
                 self.finishRequest(0)
                 break
+        else:
+            raise TimeoutError
 
-    def getRequest_Measure_to_tray(self):
-        logging.info("Get request, transitioning from Idle to Measure_to_tray")
-        self.trigger("getRequest_Measure_to_tray")
-        # Simulate finishing the request
-        time.sleep(3)  # Simulate some processing time
-        self.finishRequest(2)
-
-    def getRequest_Pump_to_measure(self):
+    def getRequest_Pump_to_measure(self, timeout=5):
         logging.info("Get request, transitioning from Idle to Pump_to_measure")
         self.trigger("getRequest_Pump_to_measure")
-        # Simulate finishing the request
-        time.sleep(3)  # Simulate some processing time
-        self.finishRequest(1)
+
+        # pump_to_measure() executes
+        start_time = time.time()
+        # Step 1. check if conditions are fulfilled, otherwise waiting...
+        while (time.time() - start_time) < timeout:
+            # To ensure the right slot of table_p is BottleFull and the right slot of table_m is Empty as well...
+            if (
+                self.shared_dict["table_p"].split("_")[-1] == "BottleFull"
+                and self.shared_dict["table_m"].split("_")[-1] == "Empty"
+            ):
+                time.sleep(3)  # Simulate some processing time
+                self.finishRequest(1)
+                break
+        else:
+            raise TimeoutError
+
+    def getRequest_Measure_to_tray(self, timeout=5):
+        logging.info("Get request, transitioning from Idle to Measure_to_tray")
+        self.trigger("getRequest_Measure_to_tray")
+
+        # measure_to_tray() executes
+        start_time = time.time()
+        # Step 1. check if conditions are fulfilled, otherwise waiting...
+        while (time.time() - start_time) < timeout:
+            # To ensure the right slot of table_m is BottleM2 and the slot on tray is ready as well...
+            if self.shared_dict["table_m"].split("_")[-1] == "BottleM2":
+                time.sleep(3)  # Simulate some processing time
+                self.finishRequest(2)
+                break
+        else:
+            raise TimeoutError
 
     def finishRequest(self, list_index):
         # Automatically return to idle state after a request is finished

@@ -41,8 +41,8 @@ def control():
     return ("", 204)
 
 
-def run_gantry(shared_list, queue, request_q):
-    gantry = GantryStateMachine(shared_list)
+def run_gantry(shared_list, shared_dict, queue, request_q):
+    gantry = GantryStateMachine(shared_list, shared_dict)
 
     try:
         gantry.auto_run(queue, request_q)
@@ -52,8 +52,8 @@ def run_gantry(shared_list, queue, request_q):
         gantry.machine.stop_server()
 
 
-def run_table_pump(shared_list, queue, request_q):
-    table = TablePumpStateMachine(shared_list, request_q)
+def run_table_pump(shared_list, shared_dict, queue, request_q):
+    table = TablePumpStateMachine(shared_list, shared_dict, request_q)
 
     try:
         table.auto_run(queue)
@@ -63,8 +63,8 @@ def run_table_pump(shared_list, queue, request_q):
         table.machine.stop_server()
 
 
-def run_table_measure(shared_list, queue, request_q):
-    table = TableMeasureStateMachine(shared_list, request_q)
+def run_table_measure(shared_list, shared_dict, queue, request_q):
+    table = TableMeasureStateMachine(shared_list, shared_dict, request_q)
 
     try:
         table.auto_run(queue)
@@ -75,28 +75,39 @@ def run_table_measure(shared_list, queue, request_q):
 
 
 if __name__ == "__main__":
+    # Queue for UI: Start/Stop
     queue_pump = Queue()
     queue_gantry = Queue()
     queue_measure = Queue()
 
+    # Queue for sending the commands
     request_queue = Queue()
 
     with Manager() as manager:
-        # Define shared bool = False means not finished
+        # Define shared bool list, False means not finished
+        # Feedback saved for [tray_to_pump, pump_to_measure, measure_to_tray]
         shared_list = manager.list([False, False, False])
+
+        # Define shared dict for 2 table states
+        shared_dict = manager.dict(
+            {
+                "table_p": "Empty_Empty",
+                "table_m": "Empty_Empty_Empty",
+            }
+        )
 
         # Start automatic state transitions
         p1 = Process(
             target=run_table_pump,
-            args=(shared_list, queue_pump, request_queue),
+            args=(shared_list, shared_dict, queue_pump, request_queue),
         )
         p2 = Process(
             target=run_gantry,
-            args=(shared_list, queue_gantry, request_queue),
+            args=(shared_list, shared_dict, queue_gantry, request_queue),
         )
         p3 = Process(
             target=run_table_measure,
-            args=(shared_list, queue_measure, request_queue),
+            args=(shared_list, shared_dict, queue_measure, request_queue),
         )
 
         p1.start()

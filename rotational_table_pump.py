@@ -66,7 +66,7 @@ class TablePumpStateMachine:
         },
     ]
 
-    def __init__(self, shared_list, request_q):
+    def __init__(self, shared_list, shared_dict, request_q):
         # self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
         self.shared_list = shared_list
         self.request_q = request_q
@@ -83,7 +83,7 @@ class TablePumpStateMachine:
             port=8083,
         )
 
-        self.table_state = "Empty_Empty"
+        self.table_state = shared_dict["table_p"]
         self.dump = None
         self.running = False
 

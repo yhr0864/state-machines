@@ -78,7 +78,7 @@ class TableMeasureStateMachine:
         },
     ]
 
-    def __init__(self, shared_list, request_q):
+    def __init__(self, shared_list, shared_dict, request_q):
         self.shared_list = shared_list
         self.request_q = request_q
 
@@ -94,7 +94,7 @@ class TableMeasureStateMachine:
             port=8085,
         )
 
-        self.table_state = "Empty_Empty_Empty"
+        self.table_state = shared_dict["table_m"]
         self.running = False
 
         # Map states to corresponding transitions
