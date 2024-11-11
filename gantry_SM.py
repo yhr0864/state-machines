@@ -33,9 +33,10 @@ class GantryStateMachine:
         },
     ]
 
-    def __init__(self, shared_list, shared_dict):
-        self.shared_list = shared_list
+    def __init__(self, shared_list, shared_dict, request_q):
+        self.is_finished = shared_list
         self.shared_dict = shared_dict
+        self.request_q = request_q
 
         # Initialize the state machine
         self.machine = WebMachine(
@@ -68,56 +69,73 @@ class GantryStateMachine:
             self.trigger("stop")  # Trigger transition to idle state
             logging.info("Gantry stopping...")
 
-    def getRequest_Tray_to_pump(self, timeout=5):
+    def getRequest_Tray_to_pump(self):
         logging.info("Get request, transitioning from Idle to Tray_to_pump")
         self.trigger("getRequest_Tray_to_pump")
 
-        # tray_to_pump() executes
-        start_time = time.time()
-        # Step 1. check if conditions are fulfilled, otherwise waiting...
-        while (time.time() - start_time) < timeout:
-            # To ensure the right slot of table_p is empty and the bottle on tray is ready as well...
-            if self.shared_dict["table_p"].split("_")[-1] == "Empty":
-                time.sleep(3)  # Simulate some processing time
-                self.finishRequest(0)
-                break
-        else:
-            raise TimeoutError
+        # Step 1. check if conditions are fulfilled
 
-    def getRequest_Pump_to_measure(self, timeout=5):
+        # To ensure the right slot of table_p is empty and the bottle on tray is ready as well...
+        if self.shared_dict["table_p"].split("_")[-1] == "Empty":
+            time.sleep(3)  # Simulate some processing time
+            self.finishRequest(0)
+
+        # elif (
+        #     self.shared_dict["table_p"].split("_")[-1] == "BottleEmpty"
+        #     or self.shared_dict["table_p"].split("_")[-1] == "BottleFull"
+        # ):
+        #     self.finishRequest(0)
+
+        # Can not implement Tray_to_pump now, so retrieve the command and return to idle
+        else:
+            self.request_q.put("Tray_to_pump")
+            self.trigger("finishRequest")
+
+    def getRequest_Pump_to_measure(self):
         logging.info("Get request, transitioning from Idle to Pump_to_measure")
         self.trigger("getRequest_Pump_to_measure")
 
-        # pump_to_measure() executes
-        start_time = time.time()
         # Step 1. check if conditions are fulfilled, otherwise waiting...
-        while (time.time() - start_time) < timeout:
-            # To ensure the right slot of table_p is BottleFull and the right slot of table_m is Empty as well...
-            if (
-                self.shared_dict["table_p"].split("_")[-1] == "BottleFull"
-                and self.shared_dict["table_m"].split("_")[-1] == "Empty"
-            ):
-                time.sleep(3)  # Simulate some processing time
-                self.finishRequest(1)
-                break
-        else:
-            raise TimeoutError
+        logging.info("current states before Pump_to_measure")
+        logging.info(self.shared_dict)
 
-    def getRequest_Measure_to_tray(self, timeout=5):
+        # To ensure the right slot of table_p is BottleFull and the right slot of table_m is Empty as well...
+        if (
+            self.shared_dict["table_p"].split("_")[-1] == "BottleFull"
+            and self.shared_dict["table_m"].split("_")[-1] == "Empty"
+        ):
+            # Simulate some processing time, later we need to call the real func
+            time.sleep(3)
+
+            self.finishRequest(1)
+
+        # If it is already done, then pass it
+        elif (
+            self.shared_dict["table_p"].split("_")[-1] == "Empty"
+            and self.shared_dict["table_m"].split("_")[-1] == "Bottle"
+        ):
+            self.finishRequest(1)
+
+        # Can not implement Pump_to_measure now, so retrieve the command and return to idle
+        else:
+            self.request_q.put("Pump_to_measure")
+            self.trigger("finishRequest")
+
+    def getRequest_Measure_to_tray(self):
         logging.info("Get request, transitioning from Idle to Measure_to_tray")
         self.trigger("getRequest_Measure_to_tray")
 
-        # measure_to_tray() executes
-        start_time = time.time()
         # Step 1. check if conditions are fulfilled, otherwise waiting...
-        while (time.time() - start_time) < timeout:
-            # To ensure the right slot of table_m is BottleM2 and the slot on tray is ready as well...
-            if self.shared_dict["table_m"].split("_")[-1] == "BottleM2":
-                time.sleep(3)  # Simulate some processing time
-                self.finishRequest(2)
-                break
+
+        # To ensure the right slot of table_m is BottleM2 and the slot on tray is ready as well...
+        if self.shared_dict["table_m"].split("_")[-1] == "BottleM2":
+            time.sleep(3)  # Simulate some processing time
+            self.finishRequest(2)
+
+        # Can not implement Measure_to_tray now, so retrieve the command and return to idle
         else:
-            raise TimeoutError
+            self.request_q.put("Measure_to_tray")
+            self.trigger("finishRequest")
 
     def finishRequest(self, list_index):
         # Automatically return to idle state after a request is finished
@@ -125,12 +143,12 @@ class GantryStateMachine:
         time.sleep(1)
 
         # Reset shared list
-        self.shared_list[list_index] = True
+        self.is_finished[list_index] = True
 
         self.trigger("finishRequest")
         logging.info(f"Gantry state after auto return: {self.state}")
 
-    def auto_run(self, queue, request_q):
+    def auto_run(self, queue):
 
         input_commands = {
             "0": self.start,
@@ -148,8 +166,9 @@ class GantryStateMachine:
                     logging.warning(f"Invalid command: {user_input}")
             else:
                 if self.running:
-                    if not request_q.empty():
-                        request = request_q.get()  # Get the request from the queue
+                    if not self.request_q.empty():
+
+                        request = self.request_q.get()  # Get the request from the queue
                         action = self.state_action_map.get(request)
 
                         if action:

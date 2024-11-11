@@ -9,6 +9,7 @@ from utils import (
     write_read,
     state_rotate,
     state_tray_to_pump,
+    state_pump_to_measure,
     state_FillBottle_and_TraytoPump,
     state_FillBottle_and_PumptoMeasure,
 )
@@ -68,7 +69,7 @@ class TablePumpStateMachine:
 
     def __init__(self, shared_list, shared_dict, request_q):
         # self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
-        self.shared_list = shared_list
+        self.is_finished = shared_list
         self.request_q = request_q
 
         # Initialize the state machine with shared state
@@ -83,7 +84,8 @@ class TablePumpStateMachine:
             port=8083,
         )
 
-        self.table_state = shared_dict["table_p"]
+        self.shared_state = shared_dict
+
         self.dump = None
         self.running = False
 
@@ -106,43 +108,89 @@ class TablePumpStateMachine:
 
     # Send command to gantry to implement Tray_to_pump
     def Tray_to_pump(self):
-        logging.info("Send command 'tray to pump' to gantry")
+        logging.info("Table_p send command 'tray to pump' to gantry")
 
         # Send command
         self.request_q.put("Tray_to_pump")
 
         # Waiting until feedback received
-        logging.info("Waiting for Tray_to_pump")
+        logging.info("Table_p waiting for Tray_to_pump")
         while True:
-            if self.shared_list[0]:
+            # Check if Tray_to_pump finished
+            if self.is_finished[0]:
                 logging.info("Tray_to_pump finished")
-                self.table_state = state_tray_to_pump(self.table_state)
+                self.shared_state["table_p"] = state_tray_to_pump(
+                    self.shared_state["table_p"]
+                )
                 self.trigger("Tray_to_pump_finished")
 
                 # Reset list for next use
-                self.shared_list[0] = False
+                self.is_finished[0] = False
                 return
+            time.sleep(0.1)
 
     # Send command to motor to implement Rotate
     def Rotate(self):
-        logging.info("Rotating table")
+        logging.info("Rotating table_p")
 
         # value = write_read(self.ser, "5")
         # if value:
         # logging.info(value)
-        self.table_state = state_rotate(self.table_state)
-        self.trigger(self.table_state)
+        self.shared_state["table_p"] = state_rotate(self.shared_state["table_p"])
+        self.trigger(self.shared_state["table_p"])
 
     # Send command to pump and gantry to simutaneously implement FillBottle_And_Tray_to_pump
     def FillBottle_and_TraytoPump(self):
         logging.info("Filling bottle and moving tray to pump")
-        self.table_state = state_FillBottle_and_TraytoPump(self.table_state)
-        self.trigger(self.table_state)
+
+        # Tray to pump
+        logging.info("Table_p send command 'tray to pump' to gantry and filling")
+        # Send command
+        self.request_q.put("Tray_to_pump")
+        # Waiting until feedback received
+        logging.info("Table_p waiting for Tray_to_pump and filling")
+        while True:
+            # Check if Tray_to_pump finished
+            if self.is_finished[0]:
+                logging.info("Tray_to_pump and filling finished")
+                # Here we need to call pump() as well
+                # Make sure pump finished!!!
+                self.shared_state["table_p"] = state_FillBottle_and_TraytoPump(
+                    self.shared_state["table_p"]
+                )
+                self.trigger(self.shared_state["table_p"])
+
+                # Reset list for next use
+                self.is_finished[0] = False
+                return
+            time.sleep(0.1)
 
     def FillBottle_and_PumptoMeasure(self):
         logging.info("Pumping to measure and filling bottle")
-        self.table_state = state_FillBottle_and_PumptoMeasure(self.table_state)
-        self.trigger(self.table_state)
+
+        # Pump to measure
+        logging.info("Table_p send command 'pump to measure' to gantry and filling")
+        # Send command
+        self.request_q.put("Pump_to_measure")
+        # Waiting until feedback received
+        logging.info("Table_p waiting for Pump_to_measure and filling")
+        while True:
+            # Check if Tray_to_pump finished
+            if self.is_finished[1]:
+                logging.info("Pump_to_measure and filling finished")
+                # Here we need to call pump() as well
+                # Make sure pump finished!!!
+                self.shared_state["table_p"], self.shared_state["table_m"] = (
+                    state_FillBottle_and_PumptoMeasure(
+                        self.shared_state["table_p"], self.shared_state["table_m"]
+                    )
+                )
+                self.trigger(self.shared_state["table_p"])
+
+                # Reset list for next use
+                self.is_finished[1] = False
+                return
+            time.sleep(0.1)
 
     def start(self):
         if not self.running:
@@ -169,25 +217,27 @@ class TablePumpStateMachine:
         """
         Automatically transitions through the states with a time delay.
         """
-        commands = {
+        UI_inputs = {
             "0": self.start,
             "1": self.stop,
             "2": self.restore,
         }
         while True:
-            if not queue.empty():  # Check if there's any input in the queue
-                user_input = queue.get()  # Get the input from the queue
-                if user_input in commands:
-                    commands[user_input]()
+            # Check if there's any input in the queue: Start/Stop
+            if not queue.empty():
+                user_input = queue.get()
+                if user_input in UI_inputs:
+                    UI_inputs[user_input]()
                     logging.info(
                         f"Received command {user_input}. Table_pump state: {self.state}"
                     )
                 else:
                     logging.warning(f"Invalid command: {user_input}")
 
+            # Check if there's any command to implement
             else:
                 if self.running:
-                    logging.info(f"Current table state: {self.state}")
+                    logging.info(f"Current table_p state: {self.state}")
                     action = self.state_action_map.get(self.state)
 
                     if action:

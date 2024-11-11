@@ -79,7 +79,7 @@ class TableMeasureStateMachine:
     ]
 
     def __init__(self, shared_list, shared_dict, request_q):
-        self.shared_list = shared_list
+        self.is_finished = shared_list
         self.request_q = request_q
 
         # Initialize the state machine with shared state
@@ -94,7 +94,8 @@ class TableMeasureStateMachine:
             port=8085,
         )
 
-        self.table_state = shared_dict["table_m"]
+        self.shared_state = shared_dict
+
         self.running = False
 
         # Map states to corresponding transitions
@@ -108,47 +109,108 @@ class TableMeasureStateMachine:
         }
 
     def Rotate(self):
-        # logging.info("Rotating table")
-        # logging.info(self.table_state)
+        logging.info("Rotating Table_m")
+        # logging.info(self.table_m_state)
 
-        self.table_state = state_rotate_120(self.table_state)
-        self.trigger(self.table_state)
+        self.shared_state["table_m"] = state_rotate_120(self.shared_state["table_m"])
+        self.trigger(self.shared_state["table_m"])
 
     def Pump_to_measure(self):
-        # logging.info("Send command 'pump to measure' to gantry")
+        logging.info("Table_m send command 'pump to measure' to gantry")
 
         # Send command
         self.request_q.put("Pump_to_measure")
 
         # Waiting until feedback received
-        # logging.info("Waiting for Pump_to_measure")
+        logging.info("Table_m waiting for Pump_to_measure")
         while True:
-            if self.shared_list[1]:
-                # logging.info("Pump_to_measure finished")
-                self.table_state = state_pump_to_measure(self.table_state)
+            # Check if Pump_to_measure finished
+            if self.is_finished[1]:
+                logging.info("Pump_to_measure finished")
+                self.shared_state["table_p"], self.shared_state["table_m"] = (
+                    state_pump_to_measure(
+                        self.shared_state["table_p"], self.shared_state["table_m"]
+                    )
+                )
                 self.trigger("Pump_to_measure_finished")
 
                 # Reset list for next use
-                self.shared_list[1] = False
+                self.is_finished[1] = False
                 return
+            time.sleep(0.1)
 
     def Pump_to_measure_and_UV(self):
-        # logging.info("Measuring with UV and moving from pump to measure")
+        logging.info("Measuring with UV and moving from pump to measure")
 
-        self.table_state = state_pump_to_measure_UV(self.table_state)
-        self.trigger(self.table_state)
+        # Pump to measure and UV
+        logging.info("Table_m send command 'pump to measure' to gantry and UV")
+        # Send command
+        self.request_q.put("Pump_to_measure")
+        # Waiting until feedback received
+        logging.info("Table_m waiting for Pump_to_measure and UV")
+        while True:
+            # Check if Pump_to_measure and UV finished
+            if self.is_finished[1]:
+                logging.info("Pump_to_measure and UV finished")
+                self.shared_state["table_p"], self.shared_state["table_m"] = (
+                    state_pump_to_measure_UV(
+                        self.shared_state["table_p"], self.shared_state["table_m"]
+                    )
+                )
+                self.trigger(self.shared_state["table_m"])
+
+                # Reset list for next use
+                self.is_finished[1] = False
+                return
+            time.sleep(0.1)
 
     def Pump_to_measure_and_UV_and_DLS(self):
-        # logging.info("Measuring with UV and DLS and moving from pump to measure")
+        logging.info("Measuring with UV and DLS and moving from pump to measure")
 
-        self.table_state = state_pump_to_measure_UV_DLS(self.table_state)
-        self.trigger(self.table_state)
+        # Pump to measure and UV
+        logging.info("Table_m send command 'pump to measure' to gantry and UV and DLS")
+        # Send command
+        self.request_q.put("Pump_to_measure")
+        # Waiting until feedback received
+        logging.info("Table_m waiting for Pump_to_measure and UV and DLS")
+        while True:
+            # Check if Pump_to_measure and UV and DLS finished
+            if self.is_finished[1]:
+                logging.info("Pump_to_measure and UV finished")
+                self.shared_state["table_p"], self.shared_state["table_m"] = (
+                    state_pump_to_measure_UV_DLS(
+                        self.shared_state["table_p"], self.shared_state["table_m"]
+                    )
+                )
+                self.trigger(self.shared_state["table_m"])
+
+                # Reset list for next use
+                self.is_finished[1] = False
+                return
+            time.sleep(0.1)
 
     def Measure_to_tray_and_UV_and_DLS(self):
-        # logging.info("Measuring with UV and DLS and moving from measure to tray")
+        logging.info("Measuring with UV and DLS and moving from measure to tray")
 
-        self.table_state = state_measure_to_tray_UV_DLS(self.table_state)
-        self.trigger(self.table_state)
+        # Measure to tray and UV and DLS
+        logging.info("Table_m send command 'measure to tray' to gantry and UV and DLS")
+        # Send command
+        self.request_q.put("Measure_to_tray")
+        # Waiting until feedback received
+        logging.info("Table_m waiting for Measure_to_tray and UV and DLS")
+        while True:
+            # Check if Measure_to_tray and UV and DLS finished
+            if self.is_finished[2]:
+                logging.info("Measure_to_tray and UV and DLS finished")
+                self.shared_state["table_m"] = state_measure_to_tray_UV_DLS(
+                    self.shared_state["table_m"]
+                )
+                self.trigger(self.shared_state["table_m"])
+
+                # Reset list for next use
+                self.is_finished[2] = False
+                return
+            time.sleep(0.1)
 
     def start(self):
         if not self.running:
@@ -166,24 +228,32 @@ class TableMeasureStateMachine:
         """
         Automatically transitions through the states with a time delay.
         """
-        commands = {
+        UI_inputs = {
             "0": self.start,
             "1": self.stop,
         }
         while True:
-            if not queue.empty():  # Check if there's any input in the queue
-                user_input = queue.get()  # Get the input from the queue
-                if user_input in commands:
-                    commands[user_input]()
+            # Check if there's any input in the queue: Start/Stop
+            if not queue.empty():
+                user_input = queue.get()
+                if user_input in UI_inputs:
+                    if user_input == "0":  # Start
+                        while True:
+                            if self.shared_state["table_m"].split("_")[-1] == "Bottle":
+                                UI_inputs[user_input]()
+                                break
+                            time.sleep(0.1)
+                    UI_inputs[user_input]()
                     # logging.info(
                     #     f"Received command {user_input}. Table_measure state: {self.state}"
                     # )
                 else:
                     logging.warning(f"Invalid command: {user_input}")
 
+            # Check if there's any command to implement
             else:
                 if self.running:
-                    # logging.info(f"Current table state: {self.state}")
+                    logging.info(f"Current table_m state: {self.state}")
                     action = self.state_action_map.get(self.state)
 
                     if action:

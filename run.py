@@ -42,10 +42,10 @@ def control():
 
 
 def run_gantry(shared_list, shared_dict, queue, request_q):
-    gantry = GantryStateMachine(shared_list, shared_dict)
+    gantry = GantryStateMachine(shared_list, shared_dict, request_q)
 
     try:
-        gantry.auto_run(queue, request_q)
+        gantry.auto_run(queue)
 
     except KeyboardInterrupt:
         logging.info("Stopping the server...")
