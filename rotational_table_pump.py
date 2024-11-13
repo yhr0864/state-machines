@@ -2,6 +2,7 @@ import time
 import logging
 import serial
 import pickle
+import unittest
 
 from transitions_gui import WebMachine
 
@@ -15,7 +16,7 @@ from utils import (
 )
 
 
-class TablePumpStateMachine:
+class TablePumpStateMachine(unittest.TestCase):
     states = [
         "Tray_to_pump",
         "Rotating",
@@ -68,6 +69,7 @@ class TablePumpStateMachine:
     ]
 
     def __init__(self, shared_list, shared_dict, request_q):
+        super().__init__()
         # self.ser = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
         self.is_finished = shared_list
         self.request_q = request_q
@@ -158,6 +160,9 @@ class TablePumpStateMachine:
                 self.shared_state["table_p"] = state_FillBottle_and_TraytoPump(
                     self.shared_state["table_p"]
                 )
+
+                # Testing if current state is correct
+                self.assertEqual(self.shared_state["table_p"], "BottleFull_BottleEmpty")
                 self.trigger(self.shared_state["table_p"])
 
                 # Reset list for next use
@@ -185,6 +190,9 @@ class TablePumpStateMachine:
                         self.shared_state["table_p"], self.shared_state["table_m"]
                     )
                 )
+
+                # Testing if current state is correct
+                self.assertEqual(self.shared_state["table_p"], "BottleFull_Empty")
                 self.trigger(self.shared_state["table_p"])
 
                 # Reset list for next use

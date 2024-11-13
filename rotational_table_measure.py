@@ -1,5 +1,6 @@
 import time
 import logging
+import unittest
 from transitions_gui import WebMachine
 
 from utils import (
@@ -14,7 +15,7 @@ from utils import (
 logging.basicConfig(level=logging.INFO)
 
 
-class TableMeasureStateMachine:
+class TableMeasureStateMachine(unittest.TestCase):
     states = [
         "Pump_to_measure",
         "Rotating",
@@ -79,6 +80,7 @@ class TableMeasureStateMachine:
     ]
 
     def __init__(self, shared_list, shared_dict, request_q):
+        super().__init__()
         self.is_finished = shared_list
         self.request_q = request_q
 
@@ -157,6 +159,9 @@ class TableMeasureStateMachine:
                         self.shared_state["table_p"], self.shared_state["table_m"]
                     )
                 )
+
+                # Testing if current state is correct
+                self.assertEqual(self.shared_state["table_m"], "BottleM1_Empty_Bottle")
                 self.trigger(self.shared_state["table_m"])
 
                 # Reset list for next use
@@ -176,11 +181,16 @@ class TableMeasureStateMachine:
         while True:
             # Check if Pump_to_measure and UV and DLS finished
             if self.is_finished[1]:
-                logging.info("Pump_to_measure and UV finished")
+                logging.info("Pump_to_measure and UV and DLS finished")
                 self.shared_state["table_p"], self.shared_state["table_m"] = (
                     state_pump_to_measure_UV_DLS(
                         self.shared_state["table_p"], self.shared_state["table_m"]
                     )
+                )
+
+                # Testing if current state is correct
+                self.assertEqual(
+                    self.shared_state["table_m"], "BottleM1_BottleM2_Bottle"
                 )
                 self.trigger(self.shared_state["table_m"])
 
@@ -204,6 +214,11 @@ class TableMeasureStateMachine:
                 logging.info("Measure_to_tray and UV and DLS finished")
                 self.shared_state["table_m"] = state_measure_to_tray_UV_DLS(
                     self.shared_state["table_m"]
+                )
+
+                # Testing if current state is correct
+                self.assertEqual(
+                    self.shared_state["table_m"], "BottleM1_BottleM2_Empty"
                 )
                 self.trigger(self.shared_state["table_m"])
 
@@ -254,6 +269,7 @@ class TableMeasureStateMachine:
             else:
                 if self.running:
                     logging.info(f"Current table_m state: {self.state}")
+                    logging.info(f"Current table status: {self.shared_state}")
                     action = self.state_action_map.get(self.state)
 
                     if action:

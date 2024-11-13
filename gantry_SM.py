@@ -167,7 +167,6 @@ class GantryStateMachine:
             else:
                 if self.running:
                     if not self.request_q.empty():
-
                         request = self.request_q.get()  # Get the request from the queue
                         action = self.state_action_map.get(request)
 
