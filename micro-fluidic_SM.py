@@ -5,22 +5,28 @@ import pickle
 
 from transitions_gui import WebMachine
 
-from utils import (
-    write_read,
-    state_rotate,
-    state_pump_to_tray,
-    state_FillBottle_and_TraytoPump,
-    state_FillBottle_and_PumptoMeasure,
-)
+from hardware import Hardware
 
 
-class TablePumpStateMachine:
+class MicroFluidicSystem:
     states = [
-        "Tray_to_pump",
-        "Rotating",
-        "FillBottle_and_TraytoPump",
-        "FillBottle_and_PumptoMeasure",
-        "Idle",
+        "before_cycle_stage_1",
+        "before_cycle_stage_2",
+        "before_cycle_stage_3",
+        "before_cycle_stage_4",
+        "before_cycle_stage_5",
+        "before_cycle_stage_6",
+        "before_cycle_stage_7",
+        "before_cycle_stage_8",
+        "before_cycle_stage_9",
+        "cycle_stage_1",
+        "cycle_stage_2",
+        "cycle_stage_3",
+        "after_cycle_stage_1",
+        "after_cycle_stage_2",
+        "after_cycle_stage_3",
+        "after_cycle_stage_4",
+        "after_cycle_stage_5",
     ]
 
     transitions = [
@@ -103,11 +109,13 @@ class TablePumpStateMachine:
         # if value:
         #     logging.info(value)
 
-    # Send command to gantry to implement Tray_to_pump
-    def Tray_to_pump(self):
-        logging.info("Send command 'tray to pump' to gantry")
+    def before_cycle_stage_1(self):
+        logging.info("  ")
+
         # Send command
-        # self.shared_list[0] = "Tray_to_pump"
+        Hardware.tray_to_pump()
+        Hardware.rotate_table_p()
+        Hardware.fill_bottle()
 
         # Waiting until feedback received
         logging.info("Waiting for Tray_to_pump")

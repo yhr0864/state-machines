@@ -2,8 +2,8 @@ import time
 
 
 class Gantry:
-    pass
+    def __init__(self) -> None:
+        pass
 
-
-def tray_to_pump():
-    time.sleep(3)
+    def move_from_to(self, x, y):
+        pass
