@@ -1,2 +1,5 @@
 Multip_env/*
 __pycache__/*
+devices/__pycache__/*
+devices/dll/*
+devices/PumpConfig/*

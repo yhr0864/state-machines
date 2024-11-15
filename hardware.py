@@ -4,31 +4,64 @@ from devices.pump import SyringePump
 
 
 class Hardware:
-    def __init__(self) -> None:
+    def __init__(self):
         self.gantry = Gantry()
         self.arduino = ArduinoBoard()
-        self.pump1 = SyringePump(1)
-        self.pump2 = SyringePump(2)
+        self.pump1 = SyringePump("Nemesys_M_1_Pump")
+        self.pump2 = SyringePump("Nemesys_M_2_Pump")
+        self.pump3 = SyringePump("Nemesys_M_3_Pump")
+        self.pump4 = SyringePump("Nemesys_M_4_Pump")
+        self.pump5 = SyringePump("Nemesys_M_5_Pump")
+        self.pump6 = SyringePump("Nemesys_M_6_Pump")
+        self.pump7 = SyringePump("Nemesys_M_7_Pump")
+        self.pump8 = SyringePump("Nemesys_M_8_Pump")
 
-    def tray_to_pump(self):
+    def initialize(self):
+        self.gantry.initialize()
+        # self.arduino.initialize()
+        self.pump1.initialize()
+
+    def tray_to_pump(self, coord_on_tray, coord_on_table_p):
         self.gantry.move_from_to(coord_on_tray, coord_on_table_p)
 
-    def pump_to_measure(self):
+    def pump_to_measure(self, coord_on_table_p, coord_on_table_m):
         self.gantry.move_from_to(coord_on_table_p, coord_on_table_m)
 
-    def measure_to_tray(self):
+    def measure_to_tray(self, coord_on_table_m, coord_on_tray):
         self.gantry.move_from_to(coord_on_table_m, coord_on_tray)
 
     def rotate_table_p(self):
-        self.arduino.send_command("rotate motor1")
+        self.arduino.send_command("motor1 rotate")
 
     def rotate_table_m(self):
-        self.arduino.send_command("rotate motor2")
+        self.arduino.send_command("motor2 rotate")
 
-    def fill_bottle(self):
-        # parallelly dispensing
-        self.pump1.dispense()
-        self.pump2.dispense()
+    def fill_bottle(self, target):
+        # Parallelly dispensing
+        match target:
+            case "formula 1":
+                self.pump1.dispense()
+                self.pump2.dispense()
+            case "formula 2":
+                self.pump2.dispense()
+                self.pump3.dispense()
+            case _:
+                print("Can not be formulated")
 
-    def measure(self):
-        pass
+    def measure_DLS(self):
+        # Dip the measure rod in the sample
+        self.arduino.send_command("rod_DLS extend")
+
+        # Measuring
+
+        # Measure finished
+        self.arduino.send_command("rod_DLS retract")
+
+    def measure_UV(self):
+        # Dip the measure rod in the sample
+        self.arduino.send_command("rod_UV extend")
+
+        # Measuring
+
+        # Measure finished
+        self.arduino.send_command("rod_UV retract")
