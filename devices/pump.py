@@ -2,15 +2,8 @@ import os
 import time
 
 import unittest
-from qmixsdk import qmixbus
-from qmixsdk import qmixpump
-
-from utils import force_monitor
-
-"""
-This version is intended for real testing only. 
-It retains all original files from the configuration file.
-"""
+from .qmixsdk import qmixbus
+from .qmixsdk import qmixpump
 
 
 class SyringePump(unittest.TestCase):
@@ -34,7 +27,12 @@ class SyringePump(unittest.TestCase):
         self.pump = qmixpump.Pump()
         self.pump.lookup_by_name(pump_name)
         self.pump_name = self.pump.get_device_name()
-        print(self.pump_name)
+        # print(self.pump_name)
+    
+    def initialize(self):
+        # Empty the air ? Here or in the hardware.py
+
+        # Ramp up the flow ?
 
     def pump_enable(self):
         print(f"Enabling pump drive: {self.pump_name}")
@@ -57,7 +55,7 @@ class SyringePump(unittest.TestCase):
         result = True
         while (result == True) and not timer.is_expired():
             # Monitor the force if it is below the threshold
-            force_monitor(pump)
+            # force_monitor(pump)
 
             time.sleep(0.1)
             if message_timer.is_expired():

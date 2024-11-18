@@ -4,7 +4,14 @@ import time
 
 class ArduinoBoard:
     def __init__(self, port="COM8", baudrate=9600, timeout=0.1):
-        self.arduino = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+
+    def initialize(self):
+        self.arduino = serial.Serial(
+            port=self.port, baudrate=self.baudrate, timeout=self.timeout
+        )
 
     def send_command(self, cmd, timeout=5):
         # Send command to Arduino
