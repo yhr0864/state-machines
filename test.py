@@ -107,18 +107,18 @@ if __name__ == "__main__":
     # except KeyboardInterrupt:
     #     logging.info("Stopping the server...")
     #     table.machine.stop_server()
-    def measure_time():
-        start_time = time.time()
-        arduino = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
-        arduino.write(bytes("command", "utf-8"))
-        end_time = time.time()
-        measured_time = end_time - start_time
-        return measured_time
+    # def measure_time():
+    #     start_time = time.time()
+    #     arduino = serial.Serial(port="COM8", baudrate=9600, timeout=0.1)
+    #     arduino.write(bytes("command", "utf-8"))
+    #     end_time = time.time()
+    #     measured_time = end_time - start_time
+    #     return measured_time
 
-    time_list = []
-    for i in range(100):
-        t = measure_time()
-        time_list.append(t)
-        time.sleep(0.1)
+    # time_list = []
+    # for i in range(100):
+    #     t = measure_time()
+    #     time_list.append(t)
+    #     time.sleep(0.1)
 
-    print(statistics.mean(time_list))
+    # print(statistics.mean(time_list))

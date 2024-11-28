@@ -51,10 +51,10 @@ class Hardware:
         self.gantry.move_from_to(coord_on_table_m, coord_on_tray)
 
     def rotate_table_p(self):
-        self.arduino.send_command("motor1 rotate")
+        return self.arduino.send_command("motor1 rotate")
 
     def rotate_table_m(self):
-        self.arduino.send_command("motor2 rotate")
+        return self.arduino.send_command("motor2 rotate")
 
     @decorator_parallel_executor
     def dose(self, pump: SyringePump):

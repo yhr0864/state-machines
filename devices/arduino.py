@@ -7,6 +7,7 @@ class ArduinoBoard:
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
+        self.feedback = None
 
     def initialize(self):
         self.arduino = serial.Serial(
@@ -22,8 +23,8 @@ class ArduinoBoard:
         while time.time() - start_time < timeout:
             # Check if get feedback
             if self.arduino.in_waiting:
-                feedback = self.arduino.readline().decode("utf-8").strip()
-                if feedback:
-                    return feedback
+                self.feedback = self.arduino.readline().decode("utf-8").strip()
+                if self.feedback:
+                    return self.feedback
         else:
             raise TimeoutError("No response from Arduino within the specified timeout.")
