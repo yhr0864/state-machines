@@ -122,3 +122,25 @@ if __name__ == "__main__":
     #     time.sleep(0.1)
 
     # print(statistics.mean(time_list))
+
+    class Base:
+        def __init__(self, p):
+            self.p = p
+
+        def func(self):
+            print(f"I am from Base {self.p}")
+
+    class Child(Base):
+        def __init__(self, m):
+            super().__init__(m)
+            self.m = m
+
+        def func(self):
+            super().func()
+            print(f"I am from Child {self.m}")
+
+    base = Base(10)
+    child = Child(20)
+
+    # base.func()
+    child.func()

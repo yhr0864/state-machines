@@ -30,7 +30,8 @@ class SyringePump(unittest.TestCase):
         # print(self.pump_name)
     
     def initialize(self):
-        # Empty the air ? Here or in the hardware.py
+        # Empty the air ? Here or in the hardware.py 
+        # OOP problem: if for all the pump experiment in the future, "Empty the air" is always necessary, then put it here
 
         # Ramp up the flow ?
 
