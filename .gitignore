@@ -3,3 +3,5 @@ __pycache__/*
 devices/__pycache__/*
 devices/dll/*
 devices/PumpConfig/*
+
+*.csv

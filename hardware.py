@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from devices.arduino import ArduinoBoard
 from devices.gantry import Gantry
 from devices.pump import SyringePump
+from devices.dls import DLS_Analyzer
 
 # Create a single global ThreadPoolExecutor
 executor = ThreadPoolExecutor()
@@ -31,10 +32,12 @@ class Hardware:
         self.pump6 = SyringePump("Nemesys_M_6_Pump")
         self.pump7 = SyringePump("Nemesys_M_7_Pump")
         self.pump8 = SyringePump("Nemesys_M_8_Pump")
+        self.dls = DLS_Analyzer()
 
     def initialize(self):
         self.gantry.initialize()
         self.arduino.initialize()
+        self.dls.initialize()
         self.pump1.initialize()
         self.pump2.initialize()
 
