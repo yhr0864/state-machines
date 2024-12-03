@@ -3,7 +3,7 @@ import time
 import serial
 from tqdm import tqdm
 
-from .utils import RequestFailed, UnexpectedResponse, ErrorOccurred
+from utils import RequestFailed, UnexpectedResponse, ErrorOccurred
 
 
 class DLS_Analyzer:
@@ -200,7 +200,7 @@ class DLS_Analyzer:
         else:
             raise UnexpectedResponse(f"Unexpected response received: {feedback}")
 
-    def request_data(self, num_of_runs: int, data_file="measurement.csv"):
+    def request_data(self, num_of_runs: int, data_file: str = "measurement.csv"):
         """
         Perform multiple measurements, collect requested data, and save results in a .csv file.
 
@@ -217,18 +217,12 @@ class DLS_Analyzer:
             RequestFailed: If any of the measurements fail or return invalid data (response 'N').
             UnexpectedResponse: If the device returns an unexpected response.
         """
-
-        cmds = [
-            # bytes([0x37, 1]),  # Request Data (Sample Loading)
-            bytes([0x37, 2]),  # Request Data (Mean Volume Diameter (Mv))
-            bytes([0x37, 3]),  # Request Data (Mean Area Diameter (Ma))
-            bytes([0x37, 4]),  # Request Data (Mean Number Diameter (Mn))
-            bytes([0x37, 5]),  # Request Data (Percentiles Values (s))
-            # bytes([0x37, 6]),  # Request Data (Size Percent Value(s))
-            # bytes([0x37, 7]),  # Request Data (Peaks Summary Value(s))
-            # bytes([0x37, 8]),  # Request Data (Tabular Data)
-            # bytes([0x37, 9]),  # Request Data (Zeta Potential)
-        ]
+        DATA_COMMANDS = {
+            "Mean Volume Diameter": bytes([0x37, 2]),
+            "Mean Area Diameter": bytes([0x37, 3]),
+            "Mean Number Diameter": bytes([0x37, 4]),
+            "Percentiles": bytes([0x37, 5]),
+        }
 
         headers = [
             "Time",
@@ -258,26 +252,24 @@ class DLS_Analyzer:
                 self.run()
                 data_line = [time.asctime(), run_id + 1]
 
-                for cmd in cmds:
+                for cmd in DATA_COMMANDS.values():
                     feedback = self.send_command(cmd=cmd)
-                    feedback_list = str(feedback).split(" ")
-                    # Error handle
+                    feedback_list = str(feedback).split()
+
                     if feedback_list[0] == "K":
-                        pass
+                        # Extract the Percentile Value from Percentile
+                        if len(feedback_list) != 2:
+                            data_line.extend(feedback_list[2::2])
+                        # Extract Data Value
+                        else:
+                            data_line.extend(feedback_list[1:])
                     elif feedback_list[0] == "N":
                         raise RequestFailed("Invalid Data Request")
                     else:
                         raise UnexpectedResponse(
-                            f"Unexpected response received: {feedback_list[0]}"
+                            f"Unexpected response: {feedback_list[0]}"
                         )
-                    # Extract the Percentile Value from Percentile
-                    if len(feedback_list) != 2:
-                        for i in range(len(feedback_list)):
-                            if i % 2 == 0 and i > 0:
-                                data_line.append(feedback_list[i])
-                    # Extract Data Value
-                    else:
-                        data_line.append(feedback_list[1])
+
                 # print(data_line)
                 writer.writerow(data_line)
 
@@ -291,6 +283,7 @@ class DLS_Analyzer:
                 avg_val = accumulated_data[k] / num_of_runs
                 last_line.append(f"{avg_val:.1f}")
             writer.writerow(last_line)
+        print(f"Measurement finished, data is saved under {data_file}")
 
 
 if __name__ == "__main__":
@@ -302,4 +295,4 @@ if __name__ == "__main__":
     dls.select_measurement_setup(5)
 
     time.sleep(1)
-    dls.request_data(num_of_runs=10)
+    dls.request_data(num_of_runs=3)
