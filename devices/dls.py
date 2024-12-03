@@ -7,6 +7,20 @@ from .utils import RequestFailed, UnexpectedResponse, ErrorOccurred
 
 
 class DLS_Analyzer:
+    """
+    A class to interface with a DLS (Dynamic Light Scattering) analyzer through a serial connection.
+
+    This class provides methods for initializing the serial connection, sending commands to
+    the DLS device, and handling communication with the device. It is intended for controlling
+    and interacting with a DLS analyzer through RS232 serial communication.
+
+    Attributes:
+        port (str): The serial port to connect to (default is "COM7").
+        baudrate (int): The baud rate for the serial connection (default is 9600).
+        timeout (int): The timeout period (in seconds) for reading from the serial port (default is 1).
+        feedback (str or None): Stores the response from the DLS device after sending a command.
+    """
+
     def __init__(self, port="COM7", baudrate=9600, timeout=1):
         self.port = port
         self.baudrate = baudrate
@@ -14,11 +28,37 @@ class DLS_Analyzer:
         self.feedback = None
 
     def initialize(self):
+        """
+        Initializes the serial connection to the DLS device.
+
+        This method sets up the serial communication using the specified port,
+        baudrate, and timeout. The connection is established via the `serial.Serial`
+        interface, enabling communication with the device.
+        """
+
         self.dls_ser = serial.Serial(
             port=self.port, baudrate=self.baudrate, timeout=self.timeout
         )
 
-    def send_command(self, cmd, timeout=5):
+    def send_command(self, cmd: bytes, timeout=5):
+        """
+        Sends a command to the DLS device and waits for a response.
+
+        This method writes the given command to the DLS device, waits for a response
+        within the specified timeout period, and returns the feedback received from the
+        device. If no response is received within the timeout, a `TimeoutError` is raised.
+
+        Args:
+            cmd (bytes): The command to send to the DLS device.
+            timeout (int, optional): The maximum time to wait for a response, in seconds. Defaults to 5 seconds.
+
+        Returns:
+            str: The feedback received from the device, decoded as a UTF-8 string.
+
+        Raises:
+            TimeoutError: If no response is received within the specified timeout.
+        """
+
         # Send command to DLS
         self.dls_ser.write(cmd)
 
@@ -37,11 +77,17 @@ class DLS_Analyzer:
 
     def com_check(self):
         """
-        Dummy command to insure that the RS232 communications link is
-        present and working. If a response is received after sending this
-        command then communications has been successfully established.
+        Verifies that the RS232 communications link is active.
 
-        Returns 'K' if communications is OK otherwise Nothing is returned (Time Out)
+        This method sends a dummy command to ensure that the RS232 communications
+        link is present and operational. If the device responds, communications
+        are considered successfully established.
+
+        Args:
+            None
+
+        Raises:
+            UnexpectedResponse: If the device returns an unexpected response.
         """
 
         cmd = bytes([0x31])
@@ -51,15 +97,22 @@ class DLS_Analyzer:
         else:
             raise UnexpectedResponse(f"Unexpected response received: {feedback}")
 
-    def select_measurement_setup(self, setup_index):
+    def select_measurement_setup(self, setup_index: int):
         """
-        Selects a Measurement Setup from the Scheduler with index (1, 2, ...).
-        Setup parameters are applied to next Setzero or Run and remain the same
-        for all subsequent measurements until changed via another Select
-        Measurement Setup command or a local change to Measurement
-        Setup is performed.
+        Selects a measurement setup from the scheduler.
 
-        Returns 'K' if successful or 'N' if unsuccessful.
+        This method selects a measurement setup by index (1, 2, ...) and applies
+        the corresponding parameters to the next `setzero` or `run` command.
+        The selected setup remains active for all subsequent measurements until
+        either another measurement setup is selected or a local change to the
+        measurement setup is made.
+
+        Args:
+            setup_index (int): The index of the measurement setup to select.
+
+        Raises:
+            RequestFailed: If the selection process fails and the device returns 'N'.
+            UnexpectedResponse: If the device returns an unexpected response.
         """
 
         cmd = bytes([0x36, setup_index])
@@ -73,12 +126,18 @@ class DLS_Analyzer:
 
     def set_zero(self):
         """
-        Initiate Setzero function (measurement with no sample present). No
-        other commands can be sent until the Host computer returns the
-        Setzero Status.
+        Initiates the Setzero function for a measurement with no sample present.
 
-        Returns the status of the Setzero after a Setzero has completed
-        'K' if pass or 'N' if fail with 'High Background'.
+        This method starts a Setzero process, which must complete before other
+        commands can be sent. The status of the Setzero process is returned once
+        it is finished.
+
+        Args:
+            None
+
+        Raises:
+            RequestFailed: If the Setzero process fails with 'High Background' (response 'N').
+            UnexpectedResponse: If the device returns an unexpected response.
         """
 
         cmd = bytes([0x33])
@@ -92,11 +151,17 @@ class DLS_Analyzer:
 
     def sample_loading(self):
         """
-        Initiate the Sample Loading function. For Diffraction Analyzers make
-        sure that auto-dilute is enabled in the Sample Loading section of the
-        Auto-Sequence Tab of the SOP.
+        Initiates the Sample Loading function.
 
-        Returns 'K' when Sample Loading Form closes.
+        This method prepares the device for a sample measurement. For Diffraction
+        Analyzers, ensure that auto-dilution is enabled in the Sample Loading
+        section of the Auto-Sequence Tab of the SOP.
+
+        Args:
+            None
+
+        Raises:
+            UnexpectedResponse: If the device returns an unexpected response.
         """
 
         cmd = bytes([0x3A])
@@ -108,11 +173,20 @@ class DLS_Analyzer:
 
     def run(self):
         """
-        Initiate a sample measurement Run function (measurement with
-        sample present). No other commands can be sent until the HOST
-        computer returns the Measurement Status.
+        Initiates a sample measurement run.
 
-        Returns 'K' if successful or 'N' if unsuccessful or 'E' if error has occurred on the HOST PC.
+        This method starts a measurement with a sample present. No other commands
+        can be sent until the HOST computer returns the measurement status. The
+        method checks the response and raises exceptions if the run fails or an
+        error occurs.
+
+        Args:
+            None
+
+        Raises:
+            RequestFailed: If the measurement run fails (response 'N').
+            ErrorOccurred: If an error occurs on the HOST PC (response 'E').
+            UnexpectedResponse: If the device returns an unexpected response.
         """
 
         cmd = bytes([0x34])
@@ -126,9 +200,22 @@ class DLS_Analyzer:
         else:
             raise UnexpectedResponse(f"Unexpected response received: {feedback}")
 
-    def request_data(self, num_of_runs, data_file="measurement.csv"):
+    def request_data(self, num_of_runs: int, data_file="measurement.csv"):
         """
         Perform multiple measurements, collect requested data, and save results in a .csv file.
+
+        This method runs multiple measurements, collects data for each measurement (e.g.,
+        mean diameters and percentiles), and stores the results in a specified CSV file.
+        After completing the measurements, it calculates and appends average values for each
+        data point.
+
+        Args:
+            num_of_runs (int): The number of measurements to perform.
+            data_file (str, optional): The file path where the data will be saved. Defaults to "measurement.csv".
+
+        Raises:
+            RequestFailed: If any of the measurements fail or return invalid data (response 'N').
+            UnexpectedResponse: If the device returns an unexpected response.
         """
 
         cmds = [
@@ -174,6 +261,15 @@ class DLS_Analyzer:
                 for cmd in cmds:
                     feedback = self.send_command(cmd=cmd)
                     feedback_list = str(feedback).split(" ")
+                    # Error handle
+                    if feedback_list[0] == "K":
+                        pass
+                    elif feedback_list[0] == "N":
+                        raise RequestFailed("Invalid Data Request")
+                    else:
+                        raise UnexpectedResponse(
+                            f"Unexpected response received: {feedback_list[0]}"
+                        )
                     # Extract the Percentile Value from Percentile
                     if len(feedback_list) != 2:
                         for i in range(len(feedback_list)):
