@@ -1,7 +1,8 @@
-import csv
 import time
+
 import serial
 from tqdm import tqdm
+import pandas as pd
 
 from utils import RequestFailed, UnexpectedResponse, ErrorOccurred
 
@@ -69,7 +70,6 @@ class DLS_Analyzer:
             # Check if get feedback
             if self.dls_ser.in_waiting:
                 self.feedback = self.dls_ser.readline().decode("utf-8").strip()
-                # self.feedback = self.dls_ser.read(200).decode("utf-8").strip()
                 if self.feedback:
                     return self.feedback
         else:
@@ -242,47 +242,44 @@ class DLS_Analyzer:
             "d(95%)",
         ]
 
-        accumulated_data = [0.0] * (len(headers) - 2)
-        with open(data_file, mode="w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
+        # DataFrame to store all measurements
+        results_df = pd.DataFrame(columns=headers)
 
-            for run_id in tqdm(range(num_of_runs), desc="Measurements Running: "):
-                # Run measurement once
-                self.run()
-                data_line = [time.asctime(), run_id + 1]
+        for run_id in tqdm(range(num_of_runs), desc="Measurements Running: "):
+            # Run measurement once
+            self.run()
+            data_line = [time.asctime(), run_id + 1]
 
-                for cmd in DATA_COMMANDS.values():
-                    feedback = self.send_command(cmd=cmd)
-                    feedback_list = str(feedback).split()
+            for cmd in DATA_COMMANDS.values():
+                feedback = self.send_command(cmd=cmd)
+                feedback_list = str(feedback).split()
 
-                    if feedback_list[0] == "K":
-                        # Extract the Percentile Value from Percentile
-                        if len(feedback_list) != 2:
-                            data_line.extend(feedback_list[2::2])
-                        # Extract Data Value
-                        else:
-                            data_line.extend(feedback_list[1:])
-                    elif feedback_list[0] == "N":
-                        raise RequestFailed("Invalid Data Request")
+                if feedback_list[0] == "K":
+                    # Extract the Percentile Value from Percentile
+                    if len(feedback_list) != 2:
+                        data_line.extend(feedback_list[2::2])
+                    # Extract Data Value
                     else:
-                        raise UnexpectedResponse(
-                            f"Unexpected response: {feedback_list[0]}"
-                        )
+                        data_line.extend(feedback_list[1:])
+                elif feedback_list[0] == "N":
+                    raise RequestFailed("Invalid Data Request")
+                else:
+                    raise UnexpectedResponse(f"Unexpected response: {feedback_list[0]}")
 
-                # print(data_line)
-                writer.writerow(data_line)
+            # Add the new row with current measurement to the DataFrame
+            results_df.loc[len(results_df)] = data_line
 
-                # Accumulate each measurement data
-                for j in range(len(headers) - 2):
-                    accumulated_data[j] += float(data_line[j + 2])
+        # Calculate mean values for numeric columns
+        numeric_columns = headers[2:]  # Exclude "Time" and "Run"
+        mean_values = results_df[numeric_columns].astype(float).mean()
+        avg_row = [time.asctime(), "Avg."] + mean_values.round(1).tolist()
 
-            # Calculate average values
-            last_line = [time.asctime(), "Avg."]
-            for k in range(len(headers) - 2):
-                avg_val = accumulated_data[k] / num_of_runs
-                last_line.append(f"{avg_val:.1f}")
-            writer.writerow(last_line)
+        # Append the average row to the DataFrame
+        results_df.loc[len(results_df)] = avg_row
+
+        # Save the results to a CSV file
+        results_df.to_csv(data_file, index=False)
+
         print(f"Measurement finished, data is saved under {data_file}")
 
 
@@ -295,4 +292,4 @@ if __name__ == "__main__":
     dls.select_measurement_setup(5)
 
     time.sleep(1)
-    dls.request_data(num_of_runs=3)
+    dls.request_data(num_of_runs=10)

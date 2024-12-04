@@ -144,5 +144,5 @@ if __name__ == "__main__":
 
     # # base.func()
     # child.func()
-
-    print((121.2 + 80.4 + 95) / 3)
+    print(type(bytes([0x31])) == bytes)
+    # print(bytes(bytes([0x31]), "utf-8"))

@@ -2,8 +2,8 @@ import os
 import time
 
 import unittest
-from .qmixsdk import qmixbus
-from .qmixsdk import qmixpump
+from qmixsdk import qmixbus
+from qmixsdk import qmixpump
 
 
 class SyringePump(unittest.TestCase):
