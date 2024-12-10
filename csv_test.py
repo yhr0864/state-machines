@@ -1,5 +1,4 @@
 import csv
-import pandas as pd
 
 
 # text = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 0], [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]]
@@ -12,42 +11,11 @@ import pandas as pd
 #         writer.writerow(centered_row)
 
 
-headers = [
-    "Time",
-    "Run",
-    "Mean volume diameter",
-    "Mean area diameter",
-    "Mean number diameter",
-    "d(10%)",
-    "d(20%)",
-    "d(30%)",
-    "d(40%)",
-    "d(50%)",
-    "d(60%)",
-    "d(70%)",
-    "d(80%)",
-    "d(90%)",
-    "d(95%)",
-]
+import pandas as pd
 
-results_df = pd.DataFrame(columns=headers)
-results_df.loc[len(results_df)] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-results_df.loc[len(results_df)] = [
-    "avg",
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-]
+# Example DataFrame
+mean_values = pd.DataFrame([1.12345, 2.56789, 3.98765, 4.54321])
 
-print(results_df)
+# Round and convert the first row
+row_list = mean_values.round(2).iloc[0].tolist()
+print(type(row_list), row_list)  # Output: [1.12, 3.99]

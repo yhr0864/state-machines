@@ -1,6 +1,7 @@
 import time
 
 import serial
+import pyautogui
 from tqdm import tqdm
 import pandas as pd
 
@@ -149,28 +150,6 @@ class DLS_Analyzer:
         else:
             raise UnexpectedResponse(f"Unexpected response received: {feedback}")
 
-    def sample_loading(self):
-        """
-        Initiates the Sample Loading function.
-
-        This method prepares the device for a sample measurement. For Diffraction
-        Analyzers, ensure that auto-dilution is enabled in the Sample Loading
-        section of the Auto-Sequence Tab of the SOP.
-
-        Args:
-            None
-
-        Raises:
-            UnexpectedResponse: If the device returns an unexpected response.
-        """
-
-        cmd = bytes([0x3A])
-        feedback = self.send_command(cmd=cmd, timeout=10)
-        if feedback == "K":
-            print("Sample Loading Successful")
-        else:
-            raise UnexpectedResponse(f"Unexpected response received: {feedback}")
-
     def run(self):
         """
         Initiates a sample measurement run.
@@ -218,6 +197,7 @@ class DLS_Analyzer:
             UnexpectedResponse: If the device returns an unexpected response.
         """
         DATA_COMMANDS = {
+            "Sample Loading": bytes([0x37, 1]),
             "Mean Volume Diameter": bytes([0x37, 2]),
             "Mean Area Diameter": bytes([0x37, 3]),
             "Mean Number Diameter": bytes([0x37, 4]),
@@ -227,6 +207,7 @@ class DLS_Analyzer:
         headers = [
             "Time",
             "Run",
+            "Loading Index",
             "Mean volume diameter",
             "Mean area diameter",
             "Mean number diameter",
@@ -270,12 +251,28 @@ class DLS_Analyzer:
             results_df.loc[len(results_df)] = data_line
 
         # Calculate mean values for numeric columns
-        numeric_columns = headers[2:]  # Exclude "Time" and "Run"
+        numeric_columns = headers[2:]  # Exclude "Time", "Run" and "Signal Quality"
         mean_values = results_df[numeric_columns].astype(float).mean()
-        avg_row = [time.asctime(), "Avg."] + mean_values.round(1).tolist()
+
+        avg_row = [
+            time.asctime(),
+            "Avg.",
+            mean_values.round(2).iloc[0],
+        ] + mean_values.round(1).tolist()[1:]
 
         # Append the average row to the DataFrame
         results_df.loc[len(results_df)] = avg_row
+
+        # Add new column for signal quality
+        signal_quality = [
+            (
+                "Over-Dilution"
+                if float(i) < 0.1
+                else "Under-Dilution" if float(i) > 100 else "Good"
+            )
+            for i in results_df["Loading Index"]
+        ]
+        results_df.insert(loc=3, column="Signal Quality", value=signal_quality)
 
         # Save the results to a CSV file
         results_df.to_csv(data_file, index=False)
@@ -292,4 +289,6 @@ if __name__ == "__main__":
     dls.select_measurement_setup(5)
 
     time.sleep(1)
+    # dls.set_zero()
+
     dls.request_data(num_of_runs=10)

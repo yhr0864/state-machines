@@ -136,13 +136,19 @@ if __name__ == "__main__":
     #         self.m = m
 
     #     def func(self):
-    #         super().func()
+    #         super().func()  # allow func overridden
     #         print(f"I am from Child {self.m}")
 
     # base = Base(10)
     # child = Child(20)
 
-    # # base.func()
+    # base.func()
     # child.func()
-    print(type(bytes([0x31])) == bytes)
+    # print(type(bytes([0x31])) == bytes)
     # print(bytes(bytes([0x31]), "utf-8"))
+
+    import pyautogui
+
+    pyautogui.click(2212, 105)
+    time.sleep(25)
+    pyautogui.click(x=2448, y=105)

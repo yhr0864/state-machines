@@ -32,6 +32,7 @@ class Hardware:
         self.pump6 = SyringePump("Nemesys_M_6_Pump")
         self.pump7 = SyringePump("Nemesys_M_7_Pump")
         self.pump8 = SyringePump("Nemesys_M_8_Pump")
+
         self.dls = DLS_Analyzer()
 
     def initialize(self):
