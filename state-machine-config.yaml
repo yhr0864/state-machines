@@ -1,0 +1,181 @@
+# State machine configuration for Micro Fluidic System
+name: "Micro Fluidic System"
+initial_state: "initialize"
+settings:
+  ignore_invalid_triggers: true
+  auto_transitions: false
+  port: 8083
+
+states:
+  - name: "initialize"
+    transitions:
+      - trigger: "initialize_finished"
+        dest: "before_cycle_stage_1"
+
+  # Before cycle stages
+  - name: "before_cycle_stage_1"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_2"
+
+  - name: "before_cycle_stage_2"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_3"
+
+  - name: "before_cycle_stage_3"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_4"
+
+  - name: "before_cycle_stage_4"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_5"
+
+  - name: "before_cycle_stage_5"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_6"
+
+  - name: "before_cycle_stage_6"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_7"
+
+  - name: "before_cycle_stage_7"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_8"
+
+  - name: "before_cycle_stage_8"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_9"
+
+  - name: "before_cycle_stage_9"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_10"
+
+  - name: "before_cycle_stage_10"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_11"
+
+  - name: "before_cycle_stage_11"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_12"
+
+  - name: "before_cycle_stage_12"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_13"
+
+  - name: "before_cycle_stage_13"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_14"
+
+  - name: "before_cycle_stage_14"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_15"
+
+  - name: "before_cycle_stage_15"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_16"
+
+  - name: "before_cycle_stage_16"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_17"
+
+  - name: "before_cycle_stage_17"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_1"
+
+  # Cycle stages
+  - name: "cycle_stage_1"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_2"
+
+  - name: "cycle_stage_2"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_3"
+
+  - name: "cycle_stage_3"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_4"
+
+  - name: "cycle_stage_4"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_branch"
+
+  - name: "cycle_stage_branch"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_6"
+
+  - name: "cycle_stage_6"
+    transitions:
+      - trigger: "command_finished"
+        dest: "cycle_stage_7"
+
+  - name: "cycle_stage_7"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage"
+
+  # After cycle stages
+  - name: "after_cycle_stage"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_2"
+
+  - name: "after_cycle_stage_2"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_3"
+
+  - name: "after_cycle_stage_3"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_4"
+
+  - name: "after_cycle_stage_4"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_5"
+
+  - name: "after_cycle_stage_5"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_6"
+
+  - name: "after_cycle_stage_6"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_7"
+
+  - name: "after_cycle_stage_7"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_8"
+
+  - name: "after_cycle_stage_8"
+    transitions:
+      - trigger: "command_finished"
+        dest: "after_cycle_stage_9"
+
+  - name: "after_cycle_stage_9"
+    transitions:
+      - trigger: "command_finished"
+        dest: "before_cycle_stage_1"

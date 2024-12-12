@@ -209,7 +209,7 @@ class StateMachine:
         # transition
         self.trigger("command_finished")
 
-    def cycle_stage_5(self):
+    def cycle_stage_branch(self):
         # Send command
         # Hardware.tray_to_pump()
         # time.sleep(1)
@@ -235,7 +235,7 @@ class StateMachine:
 
     ########################################
 
-    def after_cycle_stage_1(self):
+    def after_cycle_stage(self):
         # Send command
         # Hardware.rotate_table_p()
         # time.sleep(1)

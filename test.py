@@ -147,8 +147,44 @@ if __name__ == "__main__":
     # print(type(bytes([0x31])) == bytes)
     # print(bytes(bytes([0x31]), "utf-8"))
 
-    import pyautogui
+    # import pyautogui
 
-    pyautogui.click(2212, 105)
-    time.sleep(25)
-    pyautogui.click(x=2448, y=105)
+    # pyautogui.click(2212, 105)
+    # time.sleep(25)
+    # pyautogui.click(x=2448, y=105)
+
+    import ctypes
+    from pathlib import Path
+
+    def load_library():
+        """
+        Load the DLL library and configure the LibTest function
+        """
+        # Assuming the DLL is in the same directory as the script
+        dll_path = "./devices/uv_vis_lib/dll/SpecDLL.dll"
+        # dll_path = "./devices/pump_lib/dll/labbCAN_Pump_API.dll"
+
+        # Load the DLL
+        lib = ctypes.CDLL(str(dll_path))
+
+        # # Configure the LibTest function
+        # lib.LibTest.argtypes = []  # No arguments
+        # lib.LibTest.restype = None  # Void return type
+
+        return lib
+
+    def main():
+        try:
+            # Load the library
+            lib = load_library()
+
+            # Call the LibTest function
+            print("Calling LibTest function...")
+            # lib.LCP_GetNoOfPumps()
+            lib.LibTest()
+            print("Function called successfully!")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+    main()

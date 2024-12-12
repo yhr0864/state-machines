@@ -1,7 +1,8 @@
 Multip_env/*
 __pycache__/*
 devices/__pycache__/*
-devices/dll/*
-devices/PumpConfig/*
+
+devices/pump_lib/PumpConfig/*
 
 *.csv
+*.dll
