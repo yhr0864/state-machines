@@ -5,7 +5,7 @@ import pyautogui
 from tqdm import tqdm
 import pandas as pd
 
-from utils import RequestFailed, UnexpectedResponse, ErrorOccurred
+from .utils import RequestFailed, UnexpectedResponse, ErrorOccurred
 
 
 class DLS_Analyzer:

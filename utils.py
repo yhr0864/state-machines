@@ -1,5 +1,6 @@
 states = [
     "initialize",
+    "end",
     "before_cycle_stage_1",
     "before_cycle_stage_2",
     "before_cycle_stage_3",

@@ -2,8 +2,8 @@ import os
 import time
 
 import unittest
-from pump_lib.qmixsdk import qmixbus
-from pump_lib.qmixsdk import qmixpump
+from .pump_lib.qmixsdk import qmixbus
+from .pump_lib.qmixsdk import qmixpump
 
 
 class SyringePump(unittest.TestCase):
@@ -28,12 +28,13 @@ class SyringePump(unittest.TestCase):
         self.pump.lookup_by_name(pump_name)
         self.pump_name = self.pump.get_device_name()
         # print(self.pump_name)
-    
+
     def initialize(self):
-        # Empty the air ? Here or in the hardware.py 
+        # Empty the air ? Here or in the hardware.py
         # OOP problem: if for all the pump experiment in the future, "Empty the air" is always necessary, then put it here
 
         # Ramp up the flow ?
+        pass
 
     def pump_enable(self):
         print(f"Enabling pump drive: {self.pump_name}")

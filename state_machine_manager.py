@@ -3,6 +3,8 @@ from typing import List, Dict, Tuple, Optional
 from transitions_gui import WebMachine
 import time
 
+from hardware import Hardware
+
 
 class StateMachineLoader:
     def __init__(self, config_path: str):
@@ -28,20 +30,10 @@ class StateMachineLoader:
 
         for state in self.config["states"]:
             if "transitions" in state:
-                for trans in state["transitions"]:
-                    transition = {
-                        "trigger": trans["trigger"],
-                        "source": state["name"],
-                        "dest": trans["dest"],
-                    }
+                transition = state["transitions"]
+                transition["source"] = state["name"]
 
-                    if state["name"] == "cycle_stage_4":
-                        if trans["dest"] == "cycle_stage_branch":
-                            transition["conditions"] = "is_bottle_on_tray"
-                        elif trans["dest"] == "after_cycle_stage":
-                            transition["unless"] = "is_bottle_on_tray"
-
-                    transitions.append(transition)
+                transitions.append(transition)
 
         return states, transitions
 
@@ -50,11 +42,16 @@ class StateMachineLoader:
         states, transitions = self.states, self.transitions
         config = self.config
 
+        states_dict = {state["name"]: state for state in self.config["states"]}
+
         class ConfiguredStateMachine:
             def __init__(self):
                 # Explicitly define only the methods we want
                 for state_name in states:
-                    setattr(self, state_name, self._create_state_method(state_name))
+                    if state_name != "end":
+                        setattr(self, state_name, self._create_state_method(state_name))
+                    else:
+                        setattr(self, state_name, self._end_state)
 
                 self.machine = WebMachine(
                     model=self,
@@ -68,16 +65,42 @@ class StateMachineLoader:
                     auto_transitions=False,  # Prevent auto-transition method creation
                     port=config["settings"]["port"],
                 )
-
+                self.hardware = Hardware()
                 self.is_bottle_on_tray = True
+
+            @staticmethod
+            def _end_state() -> None:
+                """Handle end state."""
+                print("state machine is finished")
 
             def _create_state_method(self, state_name):
                 """Create a method for a specific state."""
 
+                actions_list = states_dict[state_name]["actions"]
+                trans_info = states_dict[state_name]["transitions"]["trigger"]
+
                 def state_method():
-                    print(f"Executing state: {state_name}")
-                    time.sleep(1)
-                    self.trigger("command_finished")
+                    for action in actions_list:
+                        # Check if the action needs arguments
+                        if isinstance(action, dict):
+                            action_name, args = next(iter(action.items()))
+                        else:
+                            # No arguments in action
+                            action_name = action
+                            args = None
+
+                        # Check if the action corresponds to a method in hardware
+                        if hasattr(self.hardware, action_name):
+                            method = getattr(self.hardware, action_name)
+                            # Call the method with or without arguments
+                            if args is not None:
+                                method(args)
+                            else:
+                                method()
+                        else:
+                            raise AttributeError(f"Action '{action_name}' not found.")
+
+                    self.trigger(trans_info)
 
                 return state_method
 
@@ -89,7 +112,7 @@ class StateMachineLoader:
                         method()
                     time.sleep(2)
 
-        return ConfiguredStateMachine, transitions
+        return ConfiguredStateMachine
 
 
 # Example usage:
@@ -100,21 +123,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     loader = StateMachineLoader("state_machine_config.yaml")
-    StateMachineClass, trans = loader.create_state_machine()
+    StateMachineClass = loader.create_state_machine()
     machine = StateMachineClass()
 
-    print(trans)
-    # # Verify available methods
-    # print(
-    #     "Available methods:",
-    #     [
-    #         method
-    #         for method in dir(machine)
-    #         # if not method.startswith("_")
-    #         # and not method.startswith("is_")
-    #         # and not method.startswith("may_")
-    #     ],
-    # )
+    # print(trans)
 
     try:
         # Start automatic state transitions

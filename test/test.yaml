@@ -1,0 +1,24 @@
+# State machine configuration for Micro Fluidic System
+name: "Micro Fluidic System"
+initial_state: "initialize"
+settings:
+  ignore_invalid_triggers: true
+  auto_transitions: false
+  port: 8083
+
+states:
+  - name: "initialize"
+    transitions:
+        trigger: "initialize_finished"
+        dest: "before_cycle_stage_1"
+    actions:
+      - initialize
+    
+
+  # Before cycle stages
+  - name: "before_cycle_stage_1"
+    transitions:
+        trigger: "command_finished"
+        dest: "before_cycle_stage_2"
+    actions:
+      - tray_to_pump: (0, 0)

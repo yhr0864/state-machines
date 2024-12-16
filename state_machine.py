@@ -20,6 +20,7 @@ class StateMachine:
             port=8083,
         )
 
+        self.hardware = Hardware()
         self.is_bottle_on_tray = True
 
     def initialize(self):

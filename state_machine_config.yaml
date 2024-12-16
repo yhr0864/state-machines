@@ -9,236 +9,270 @@ settings:
 states:
   - name: "initialize"
     transitions:
-      - trigger: "initialize_finished"
+        trigger: "initialize_finished"
         dest: "before_cycle_stage_1"
     actions:
-      - self.trigger("initialize_finished")
+      - initialize
+    
 
   # Before cycle stages
   - name: "before_cycle_stage_1"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_2"
     actions:
-      - self.trigger("command_finished")
+      - tray_to_pump: (0, 0)
 
   - name: "before_cycle_stage_2"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_3"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "before_cycle_stage_3"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_4"
     actions:
-      - self.trigger("command_finished")
+      - fill_bottle: ("test_input")
+      - tray_to_pump: (0, 0)
 
   - name: "before_cycle_stage_4"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_5"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "before_cycle_stage_5"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_6"
     actions:
-      - self.trigger("command_finished")
+      - fill_bottle: ("test_input")
+      - pump_to_measure: (0, 0)
 
   - name: "before_cycle_stage_6"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_7"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
 
   - name: "before_cycle_stage_7"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_8"
     actions:
-      - self.trigger("command_finished")
+      - tray_to_pump: (0, 0)
+      - measure_UV
 
   - name: "before_cycle_stage_8"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_9"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "before_cycle_stage_9"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_10"
     actions:
-      - self.trigger("command_finished")
+      - fill_bottle: ("test_input")
+      - pump_to_measure: (0, 0)
 
   - name: "before_cycle_stage_10"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_11"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
 
   - name: "before_cycle_stage_11"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_12"
     actions:
-      - self.trigger("command_finished")
+      - tray_to_pump: (0, 0)
 
   - name: "before_cycle_stage_12"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_13"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "before_cycle_stage_13"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_14"
     actions:
-      - self.trigger("command_finished")
+      - fill_bottle: ("test_input")
+      - pump_to_measure: (0, 0)
+      - measure_DLS
+      - measure_UV
 
   - name: "before_cycle_stage_14"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_15"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
 
   - name: "before_cycle_stage_15"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_16"
     actions:
-      - self.trigger("command_finished")
+      - tray_to_pump: (0, 0)
 
   - name: "before_cycle_stage_16"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "before_cycle_stage_17"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "before_cycle_stage_17"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_1"
     actions:
-      - self.trigger("command_finished")
+      - fill_bottle: ("test_input")
+      - measure_DLS
+      - measure_UV
 
   # Cycle stages
   - name: "cycle_stage_1"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_2"
     actions:
-      - self.trigger("command_finished")
+      - measure_to_tray: (0, 0)
 
   - name: "cycle_stage_2"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_3"
     actions:
-      - self.trigger("command_finished")
+      - pump_to_measure: (0, 0)
 
   - name: "cycle_stage_3"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_4"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
 
   - name: "cycle_stage_4"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_branch"
+        conditions: "is_bottle_on_tray"
     actions:
-      - self.trigger("command_finished")
+      - measure_DLS
+      - measure_UV
 
   - name: "cycle_stage_branch"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_6"
     actions:
-      - self.trigger("command_finished")
+      - tray_to_pump: (0, 0)
 
   - name: "cycle_stage_6"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "cycle_stage_7"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "cycle_stage_7"
     transitions:
-      - trigger: "command_finished"
-        dest: "after_cycle_stage"
+        trigger: "command_finished"
+        dest: "cycle_stage_1"
     actions:
-      - self.trigger("command_finished")
+      - fill_bottle: ("test_input")
+  
+  - name: "cycle_stage_4"
+    transitions:
+        trigger: "command_finished"
+        dest: "after_cycle_stage"
+        unless: "is_bottle_on_tray"
+    actions:
+      - measure_DLS
+      - measure_UV
 
   # After cycle stages
   - name: "after_cycle_stage"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_2"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_p
 
   - name: "after_cycle_stage_2"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_3"
     actions:
-      - self.trigger("command_finished")
+      - measure_to_tray: (0, 0)
 
   - name: "after_cycle_stage_3"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_4"
     actions:
-      - self.trigger("command_finished")
+      - pump_to_measure: (0, 0)
 
   - name: "after_cycle_stage_4"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_5"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
 
   - name: "after_cycle_stage_5"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_6"
     actions:
-      - self.trigger("command_finished")
+      - measure_DLS
+      - measure_UV
+      - measure_to_tray: (0, 0)
 
   - name: "after_cycle_stage_6"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_7"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
 
   - name: "after_cycle_stage_7"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_8"
     actions:
-      - self.trigger("command_finished")
+      - measure_DLS
+      - measure_to_tray: (0, 0)
 
   - name: "after_cycle_stage_8"
     transitions:
-      - trigger: "command_finished"
+        trigger: "command_finished"
         dest: "after_cycle_stage_9"
     actions:
-      - self.trigger("command_finished")
+      - rotate_table_m
+  
+  - name: "after_cycle_stage_9"
+    transitions:
+        trigger: "command_finished"
+        dest: "end"
+    actions:
+      - measure_to_tray: (0, 0)
+    
+  - name: "end"
+    
 
 
