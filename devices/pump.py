@@ -4,6 +4,7 @@ import time
 import unittest
 from .pump_lib.qmixsdk import qmixbus
 from .pump_lib.qmixsdk import qmixpump
+from .pump_lib.qmixsdk import qmixanalogio
 
 
 class SyringePump(unittest.TestCase):
@@ -71,14 +72,19 @@ class SyringePump(unittest.TestCase):
             result = pump.is_pumping()
         return not result
 
-    def force_monitoring_config(self):
-        self.assertTrue(self.pump.has_force_monitoring())
-        self.pump.enable_force_monitoring(True)
-        print("Force unit: ", self.pump.get_force_unit())
-        print("Max device force: ", self.pump.get_max_device_force())
+    # def force_monitoring_config(self):
+    #     self.assertTrue(self.pump.has_force_monitoring())
+    #     self.pump.enable_force_monitoring(True)
+    #     print("Force unit: ", self.pump.get_force_unit())
+    #     print("Max device force: ", self.pump.get_max_device_force())
 
-        # Setup the force limit
-        self.pump.write_force_limit(0.11)
+    #     # Setup the force limit
+    #     self.pump.write_force_limit(0.11)
+    def pressure_monitor(self):
+        pressure_channel = qmixanalogio.AnalogInChannel()
+        pressure_channel.lookup_channel_by_name(f"{self.pump_name}_AnIN1")
+        print(f"Current status: {pressure_channel.read_status()}")
+        print(f"Current pressure: {pressure_channel.read_input():.2f}")
 
     def si_units(self):
         """
@@ -228,7 +234,7 @@ class SyringePump(unittest.TestCase):
 
 def test(pump: SyringePump):
     pump.pump_enable()
-    pump.force_monitoring_config()
+    pump.pressure_monitor()
     pump.si_units()
 
     # pump.aspirate()
@@ -265,7 +271,7 @@ def decorator_parallel_executor(func):
 @decorator_parallel_executor
 def multi_thread_test(pump: SyringePump):
     pump.pump_enable()
-    pump.force_monitoring_config()
+    pump.pressure_monitor()
     pump.si_units()
 
     # pump.aspirate()
@@ -274,14 +280,16 @@ def multi_thread_test(pump: SyringePump):
     # pump.generate_flow()
     # pump.set_syringe_level()  # Test with this one first
     # pump.valve()
-    pump.switch_valve_to(0)
-    time.sleep(2)
-    pump.switch_valve_to(1)
-    time.sleep(3)
-    pump.switch_valve_to(2)
-    time.sleep(2)
-    pump.switch_valve_to(3)
-    time.sleep(2)
+
+    # valve switch test
+    # pump.switch_valve_to(0)
+    # time.sleep(2)
+    # pump.switch_valve_to(1)
+    # time.sleep(3)
+    # pump.switch_valve_to(2)
+    # time.sleep(2)
+    # pump.switch_valve_to(3)
+    # time.sleep(2)
     pump.capi_close()
 
 
