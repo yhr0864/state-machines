@@ -11,10 +11,11 @@ class SyringePump(unittest.TestCase):
     _bus_opened = False
     _bus_closed = False
 
-    def __init__(self, pump_name):
+    def __init__(self, pump_name, pressure_limit):
         super().__init__()
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.deviceconfig = os.path.join(script_dir, "PumpConfig")
+        self.pressure_limit = pressure_limit
 
         # Make sure bus only opened once
         if not self._bus_opened:
@@ -28,6 +29,9 @@ class SyringePump(unittest.TestCase):
         self.pump = qmixpump.Pump()
         self.pump.lookup_by_name(pump_name)
         self.pump_name = self.pump.get_device_name()
+
+        self.pressure_channel = qmixanalogio.AnalogInChannel()
+        self.pressure_channel.lookup_channel_by_name(f"{self.pump_name}_AnIN1")
         # print(self.pump_name)
 
     def initialize(self):
@@ -35,9 +39,8 @@ class SyringePump(unittest.TestCase):
         # OOP problem: if for all the pump experiment in the future, "Empty the air" is always necessary, then put it here
 
         # Ramp up the flow ?
-        pass
 
-    def pump_enable(self):
+        # Enable the pump
         print(f"Enabling pump drive: {self.pump_name}")
         if self.pump.is_in_fault_state():
             self.pump.clear_fault()
@@ -46,8 +49,11 @@ class SyringePump(unittest.TestCase):
             self.pump.enable(True)
         self.assertTrue(self.pump.is_enabled())
 
-    @staticmethod
-    def wait_dosage_finished(pump, timeout_seconds):
+        # Ckeck if pressuren sensor works
+        self.current_pressure_sensor_status = self.pressure_channel.read_status()
+        print(f"Current sensor status: {self.current_pressure_sensor_status}")
+
+    def wait_dosage_finished(self, timeout_seconds):
         """
         The function waits until the last dosage command has finished
         until the timeout occurs.
@@ -58,18 +64,22 @@ class SyringePump(unittest.TestCase):
         result = True
         while (result == True) and not timer.is_expired():
             # Monitor the force if it is below the threshold
-            # force_monitor(pump)
+            current_pressure = self.pressure_channel.read_input()
+            if current_pressure >= self.pressure_limit:
+                print(
+                    f"Warning: Current pressure {current_pressure} is over the limit. Pump stops!"
+                )
+                self.pump.stop_pumping()
+                break
 
             time.sleep(0.1)
             if message_timer.is_expired():
                 print(
-                    f"Fill level: {pump.get_fill_level()}, \
-                    Current force: {pump.read_force_sensor()}, \
-                    {pump.is_force_safety_stop_active()}"
+                    f"Fill level: {self.pump.get_fill_level()}, Current pressure: {current_pressure:.2f}"
                 )
                 message_timer.restart()
 
-            result = pump.is_pumping()
+            result = self.pump.is_pumping()
         return not result
 
     # def force_monitoring_config(self):
@@ -80,11 +90,15 @@ class SyringePump(unittest.TestCase):
 
     #     # Setup the force limit
     #     self.pump.write_force_limit(0.11)
+
     def pressure_monitor(self):
+        # Test this to ensure the unit of pressure: bar?
         pressure_channel = qmixanalogio.AnalogInChannel()
         pressure_channel.lookup_channel_by_name(f"{self.pump_name}_AnIN1")
-        print(f"Current status: {pressure_channel.read_status()}")
-        print(f"Current pressure: {pressure_channel.read_input():.2f}")
+        current_pressure = pressure_channel.read_status()
+        print(f"Current status: {current_pressure}")
+        print(f"Current pressure: {current_pressure:.2f}")
+        return current_pressure
 
     def si_units(self):
         """
@@ -120,34 +134,34 @@ class SyringePump(unittest.TestCase):
         finished = self.wait_dosage_finished(self.pump, 20)
         self.assertEqual(True, finished)
 
-    def pump_volume(self):
-        print("Testing pumping volume...")
-        max_volume = self.pump.get_volume_max() / 10
-        max_flow = self.pump.get_flow_rate_max() / 3
+    # def pump_volume(self):
+    #     print("Testing pumping volume...")
+    #     max_volume = self.pump.get_volume_max() / 10
+    #     max_flow = self.pump.get_flow_rate_max() / 3
 
-        self.pump.pump_volume(0 - max_volume, max_flow)  # aspirate
-        finished = self.wait_dosage_finished(self.pump, 10)
-        self.assertEqual(True, finished)
+    #     self.pump.pump_volume(0 - max_volume, max_flow)  # aspirate
+    #     finished = self.wait_dosage_finished(self.pump, 10)
+    #     self.assertEqual(True, finished)
 
-        self.pump.pump_volume(max_volume, max_flow)  # dispense
-        finished = self.wait_dosage_finished(self.pump, 10)
-        self.assertEqual(True, finished)
+    #     self.pump.pump_volume(max_volume, max_flow)  # dispense
+    #     finished = self.wait_dosage_finished(self.pump, 10)
+    #     self.assertEqual(True, finished)
 
-    def generate_flow(self):  # get deviation
-        """
-        Generate a continuous flow.
+    # def generate_flow(self):  # get deviation
+    #     """
+    #     Generate a continuous flow.
 
-        A negative flow indicates aspiration and a positiove flow indicates
-        dispension.
-        """
-        print("Testing generating flow...")
-        max_flow = self.pump.get_flow_rate_max() / 3
-        self.pump.generate_flow(max_flow)
-        time.sleep(1)
-        flow_is = self.pump.get_flow_is()
-        self.assertAlmostEqual(max_flow, flow_is, places=4)
-        finished = self.wait_dosage_finished(self.pump, 30)
-        self.assertEqual(True, finished)
+    #     A negative flow indicates aspiration and a positiove flow indicates
+    #     dispension.
+    #     """
+    #     print("Testing generating flow...")
+    #     max_flow = self.pump.get_flow_rate_max() / 3
+    #     self.pump.generate_flow(max_flow)
+    #     time.sleep(1)
+    #     flow_is = self.pump.get_flow_is()
+    #     self.assertAlmostEqual(max_flow, flow_is, places=4)
+    #     finished = self.wait_dosage_finished(self.pump, 30)
+    #     self.assertEqual(True, finished)
 
     def set_syringe_level(self):  # get deviation
         """
@@ -295,14 +309,14 @@ def multi_thread_test(pump: SyringePump):
 
 if __name__ == "__main__":
 
-    pump1 = SyringePump("Nemesys_M_1_Pump")
-    pump2 = SyringePump("Nemesys_M_2_Pump")
-    pump3 = SyringePump("Nemesys_M_3_Pump")
-    pump4 = SyringePump("Nemesys_M_4_Pump")
-    pump5 = SyringePump("Nemesys_M_5_Pump")
-    pump6 = SyringePump("Nemesys_M_6_Pump")
-    pump7 = SyringePump("Nemesys_M_7_Pump")
-    pump8 = SyringePump("Nemesys_M_8_Pump")
+    pump1 = SyringePump("Nemesys_M_1_Pump", 30)
+    pump2 = SyringePump("Nemesys_M_2_Pump", 30)
+    pump3 = SyringePump("Nemesys_M_3_Pump", 12)
+    pump4 = SyringePump("Nemesys_M_4_Pump", 12)
+    pump5 = SyringePump("Nemesys_M_5_Pump", 12)
+    pump6 = SyringePump("Nemesys_M_6_Pump", 24)
+    pump7 = SyringePump("Nemesys_M_7_Pump", 24)
+    pump8 = SyringePump("Nemesys_M_8_Pump", 30)
 
     # test(pump3)
 
