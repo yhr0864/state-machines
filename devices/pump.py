@@ -2,9 +2,9 @@ import os
 import time
 
 import unittest
-from .pump_lib.qmixsdk import qmixbus
-from .pump_lib.qmixsdk import qmixpump
-from .pump_lib.qmixsdk import qmixanalogio
+from pump_lib.qmixsdk import qmixbus
+from pump_lib.qmixsdk import qmixpump
+from pump_lib.qmixsdk import qmixanalogio
 
 
 class SyringePump(unittest.TestCase):
@@ -14,7 +14,7 @@ class SyringePump(unittest.TestCase):
     def __init__(self, pump_name, pressure_limit):
         super().__init__()
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.deviceconfig = os.path.join(script_dir, "PumpConfig")
+        self.deviceconfig = os.path.join(script_dir, "pump_lib/PumpConfig")
         self.pressure_limit = pressure_limit
 
         # Make sure bus only opened once
@@ -32,6 +32,8 @@ class SyringePump(unittest.TestCase):
 
         self.pressure_channel = qmixanalogio.AnalogInChannel()
         self.pressure_channel.lookup_channel_by_name(f"{self.pump_name}_AnIN1")
+
+        self.finished = None
         # print(self.pump_name)
 
     def initialize(self):
@@ -48,6 +50,11 @@ class SyringePump(unittest.TestCase):
         if not self.pump.is_enabled():
             self.pump.enable(True)
         self.assertTrue(self.pump.is_enabled())
+
+        # Check Valves
+        if not self.pump.has_valve():
+            raise ModuleNotFoundError("no valve installed")
+        self.valve = self.pump.get_valve()
 
         # Ckeck if pressuren sensor works
         self.current_pressure_sensor_status = self.pressure_channel.read_status()
@@ -75,21 +82,13 @@ class SyringePump(unittest.TestCase):
             time.sleep(0.1)
             if message_timer.is_expired():
                 print(
-                    f"Fill level: {self.pump.get_fill_level()}, Current pressure: {current_pressure:.2f}"
+                    f" Dosed volume: {self.pump.get_dosed_volume()}, Flow rate: {self.pump.get_flow_is()}, \
+                    Fill level: {self.pump.get_fill_level()}, Current pressure: {current_pressure:.2f}"
                 )
                 message_timer.restart()
 
             result = self.pump.is_pumping()
         return not result
-
-    # def force_monitoring_config(self):
-    #     self.assertTrue(self.pump.has_force_monitoring())
-    #     self.pump.enable_force_monitoring(True)
-    #     print("Force unit: ", self.pump.get_force_unit())
-    #     print("Max device force: ", self.pump.get_max_device_force())
-
-    #     # Setup the force limit
-    #     self.pump.write_force_limit(0.11)
 
     def pressure_monitor(self):
         # Test this to ensure the unit of pressure: bar?
@@ -104,127 +103,83 @@ class SyringePump(unittest.TestCase):
         """
         Setup the unit for volume and flow rate
         """
+
         print("Testing SI units...")
-        self.pump.set_volume_unit(qmixpump.UnitPrefix.micro, qmixpump.VolumeUnit.litres)
+        self.pump.set_volume_unit(qmixpump.UnitPrefix.milli, qmixpump.VolumeUnit.litres)
         max_ml = self.pump.get_volume_max()
-        print("Max. volume μl: ", max_ml, self.pump.get_volume_unit())
+        print("Max. volume ml: ", max_ml, self.pump.get_volume_unit())
 
         self.pump.set_flow_unit(
-            qmixpump.UnitPrefix.micro,
+            qmixpump.UnitPrefix.milli,
             qmixpump.VolumeUnit.litres,
             qmixpump.TimeUnit.per_second,
         )
         max_ml_s = self.pump.get_flow_rate_max()
-        print("Max. flow μl/s: ", max_ml_s, self.pump.get_flow_unit())
+        print("Max. flow ml/s: ", max_ml_s, self.pump.get_flow_unit())
 
-    def aspirate(self):
-        print("Testing aspiration...")
-        max_volume = self.pump.get_volume_max() / 2
-        max_flow = self.pump.get_flow_rate_max()
-        self.pump.aspirate(max_volume, max_flow)
-
-        finished = self.wait_dosage_finished(self.pump, 30)
-        self.assertEqual(True, finished)
-
-    def dispense(self):
-        print("Testing dispensing...")
-        max_volume = self.pump.get_volume_max() / 4
-        max_flow = self.pump.get_flow_rate_max() / 2
-        self.pump.dispense(max_volume, max_flow)
-        finished = self.wait_dosage_finished(self.pump, 20)
-        self.assertEqual(True, finished)
-
-    # def pump_volume(self):
-    #     print("Testing pumping volume...")
-    #     max_volume = self.pump.get_volume_max() / 10
-    #     max_flow = self.pump.get_flow_rate_max() / 3
-
-    #     self.pump.pump_volume(0 - max_volume, max_flow)  # aspirate
-    #     finished = self.wait_dosage_finished(self.pump, 10)
-    #     self.assertEqual(True, finished)
-
-    #     self.pump.pump_volume(max_volume, max_flow)  # dispense
-    #     finished = self.wait_dosage_finished(self.pump, 10)
-    #     self.assertEqual(True, finished)
-
-    # def generate_flow(self):  # get deviation
-    #     """
-    #     Generate a continuous flow.
-
-    #     A negative flow indicates aspiration and a positiove flow indicates
-    #     dispension.
-    #     """
-    #     print("Testing generating flow...")
-    #     max_flow = self.pump.get_flow_rate_max() / 3
-    #     self.pump.generate_flow(max_flow)
-    #     time.sleep(1)
-    #     flow_is = self.pump.get_flow_is()
-    #     self.assertAlmostEqual(max_flow, flow_is, places=4)
-    #     finished = self.wait_dosage_finished(self.pump, 30)
-    #     self.assertEqual(True, finished)
-
-    def set_syringe_level(self):  # get deviation
+    def aspirate(self, volume, flow):
         """
-        Pumps fluid with the given flow rate until the requested fill level is reached.
-
-        Depending on the requested fill level given in Level parameter this
-        function may cause aspiration or dispension of fluid. This function only
-        works properly for pump devices that support a fill level (eg. syringe
-        pumps). Pumps like peristaltic pumps do not support a fill level and the
-        function returns an error for unsupported pump types.
+        Aspirate a certain volume with a certain flow rate.
         """
-        print("Testing set syringe fill level...")
-        max_flow = self.pump.get_flow_rate_max() / 2
-        max_volume = self.pump.get_volume_max() / 2
-        self.pump.set_fill_level(max_volume, max_flow)
-        finished = self.wait_dosage_finished(self.pump, 30)
-        self.assertEqual(True, finished)
 
-        fill_level_is = self.pump.get_fill_level()
-        # self.assertAlmostEqual(max_volume, fill_level_is, places=1)
-        print(fill_level_is)
+        self.switch_valve_to(1)
+        self.pump.aspirate(volume, flow)
 
-        self.pump.set_fill_level(0, max_flow)
-        finished = self.wait_dosage_finished(self.pump, 30)
-        self.assertEqual(True, finished)
+        self.finished = self.wait_dosage_finished(self.pump, 30)
+        self.assertEqual(True, self.finished)
+        return self.finished
 
-        fill_level_is = self.pump.get_fill_level()
-        # self.assertAlmostEqual(0, fill_level_is, places=1)
-        print(fill_level_is)
+    def dispense(self, volume, flow):
+        """
+        Dispense a certain volume with a certain flow rate.
+        """
 
-    def valve(self):
-        print("Testing valve...")
-        if not self.pump.has_valve():
-            print("no valve installed")
+        self.switch_valve_to(2)
+        self.pump.dispense(volume, flow)
+        self.finished = self.wait_dosage_finished(self.pump, 30)
+        self.assertEqual(True, self.finished)
+        return self.finished
 
-        valve = self.pump.get_valve()
-        valve_pos_count = valve.number_of_valve_positions()
-        print("Valve positions: ", valve_pos_count)
-        for i in range(valve_pos_count):
-            valve.switch_valve_to_position(i)
-            time.sleep(0.2)  # give valve some time to move to target
-            valve_pos_is = valve.actual_valve_position()
-            self.assertEqual(i, valve_pos_is)
+    def refill(self):
+        self.switch_valve_to(1)
+        flow = 0 - self.pump.get_flow_rate_max() / 10
+        self.finished = self.generate_flow(flow)
+        return self.finished
 
-    def switch_valve_to(self, position):
-        """0: Close, 1: Refill, 2: Dispense, 3: Close"""
-        if not self.pump.has_valve():
-            print("no valve installed")
-            return
+    def empty(self):
+        self.switch_valve_to(2)
+        flow = self.pump.get_flow_rate_max() / 10
+        self.finished = self.generate_flow(flow)
+        return self.finished
 
-        valve = self.pump.get_valve()
-        valve.switch_valve_to_position(position)
+    def generate_flow(self, flow):  # get deviation
+        """
+        Generate a continuous flow.
+
+        A negative flow indicates aspiration and a positiove flow indicates
+        dispension.
+        """
+
+        self.pump.generate_flow(flow)
+        self.finished = self.wait_dosage_finished(self.pump, 30)
+        self.assertEqual(True, self.finished)
+        return self.finished
+
+    def switch_valve_to(self, position: int):
+        """0: Close, 1: Aspirate, 2: Dispense"""
+
+        self.valve.switch_valve_to_position(position)
         time.sleep(0.2)  # give valve some time to move to target
 
         # Ensure the valve is in the right position
-        valve_pos_is = valve.actual_valve_position()
-        print(f"Current valve position: {valve_pos_is}")
+        valve_pos_is = self.valve.actual_valve_position()
         self.assertEqual(position, valve_pos_is)
 
     def stop_pump(self):
         """
         Immediately stop pumping.
         """
+
         self.pump.stop_pumping()
 
     @staticmethod
@@ -247,7 +202,7 @@ class SyringePump(unittest.TestCase):
 
 
 def test(pump: SyringePump):
-    pump.pump_enable()
+    pump.initialize()
     pump.pressure_monitor()
     pump.si_units()
 
@@ -284,7 +239,7 @@ def decorator_parallel_executor(func):
 
 @decorator_parallel_executor
 def multi_thread_test(pump: SyringePump):
-    pump.pump_enable()
+    pump.initialize()
     pump.pressure_monitor()
     pump.si_units()
 
