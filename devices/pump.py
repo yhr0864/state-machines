@@ -31,10 +31,10 @@ class SyringePump(unittest.TestCase):
         self.pump_name = self.pump.get_device_name()
 
         self.pressure_channel = qmixanalogio.AnalogInChannel()
-        self.pressure_channel.lookup_channel_by_name(f"{self.pump_name}_AnIN1")
+        # print(self.pump_name)
+        self.pressure_channel.lookup_channel_by_name(f"{self.pump_name[:-5]}_AnIN1")
 
         self.finished = None
-        # print(self.pump_name)
 
     def initialize(self):
         # Empty the air ? Here or in the hardware.py
@@ -60,6 +60,18 @@ class SyringePump(unittest.TestCase):
         self.current_pressure_sensor_status = self.pressure_channel.read_status()
         print(f"Current sensor status: {self.current_pressure_sensor_status}")
 
+        ##########################################
+        # Only test for all the channel info
+        ##########################################
+        self.ch1 = qmixanalogio.AnalogInChannel()
+        self.ch1.lookup_channel_by_name(f"{self.pump_name[:-5]}_ForceSensor")
+        print(f"Current force: {self.ch1.read_input()}")
+
+
+        print(f"current level: {self.pump.get_fill_level()}")
+        print(f"current flow: {self.pump.get_flow_is} {self.pump.get_flow_unit}")
+        
+
     def wait_dosage_finished(self, timeout_seconds):
         """
         The function waits until the last dosage command has finished
@@ -72,12 +84,12 @@ class SyringePump(unittest.TestCase):
         while (result == True) and not timer.is_expired():
             # Monitor the force if it is below the threshold
             current_pressure = self.pressure_channel.read_input()
-            if current_pressure >= self.pressure_limit:
-                print(
-                    f"Warning: Current pressure {current_pressure} is over the limit. Pump stops!"
-                )
-                self.pump.stop_pumping()
-                break
+            # if current_pressure >= self.pressure_limit:
+            #     print(
+            #         f"Warning: Current pressure {current_pressure} is over the limit. Pump stops!"
+            #     )
+            #     self.pump.stop_pumping()
+            #     break
 
             time.sleep(0.1)
             if message_timer.is_expired():
@@ -93,7 +105,7 @@ class SyringePump(unittest.TestCase):
     def pressure_monitor(self):
         # Test this to ensure the unit of pressure: bar?
         pressure_channel = qmixanalogio.AnalogInChannel()
-        pressure_channel.lookup_channel_by_name(f"{self.pump_name}_AnIN1")
+        pressure_channel.lookup_channel_by_name(f"{self.pump_name[:-5]}_AnIN1")
         current_pressure = pressure_channel.read_status()
         print(f"Current status: {current_pressure}")
         print(f"Current pressure: {current_pressure:.2f}")
@@ -125,7 +137,7 @@ class SyringePump(unittest.TestCase):
         self.switch_valve_to(1)
         self.pump.aspirate(volume, flow)
 
-        self.finished = self.wait_dosage_finished(self.pump, 30)
+        self.finished = self.wait_dosage_finished(30)
         self.assertEqual(True, self.finished)
         return self.finished
 
@@ -136,7 +148,7 @@ class SyringePump(unittest.TestCase):
 
         self.switch_valve_to(2)
         self.pump.dispense(volume, flow)
-        self.finished = self.wait_dosage_finished(self.pump, 30)
+        self.finished = self.wait_dosage_finished(30)
         self.assertEqual(True, self.finished)
         return self.finished
 
@@ -161,7 +173,7 @@ class SyringePump(unittest.TestCase):
         """
 
         self.pump.generate_flow(flow)
-        self.finished = self.wait_dosage_finished(self.pump, 30)
+        self.finished = self.wait_dosage_finished(30)
         self.assertEqual(True, self.finished)
         return self.finished
 
@@ -169,7 +181,7 @@ class SyringePump(unittest.TestCase):
         """0: Close, 1: Aspirate, 2: Dispense"""
 
         self.valve.switch_valve_to_position(position)
-        time.sleep(0.2)  # give valve some time to move to target
+        time.sleep(0.5)  # give valve some time to move to target
 
         # Ensure the valve is in the right position
         valve_pos_is = self.valve.actual_valve_position()
@@ -205,17 +217,17 @@ def test(pump: SyringePump):
     pump.initialize()
     pump.pressure_monitor()
     pump.si_units()
-
-    # pump.aspirate()
-    # pump.dispense()
+    
+    # pump.aspirate(0.5, 0.005)
+    # pump.dispense(0.5, 0.005)
     # pump.pump_volume()
     # pump.generate_flow()
     # pump.set_syringe_level()  # Test with this one first
     # pump.valve()
-    pump.switch_valve_to(1)
-    time.sleep(3)
-    pump.switch_valve_to(0)
-    time.sleep(1)
+    # pump.switch_valve_to(1)
+    # time.sleep(3)
+    # pump.switch_valve_to(0)
+    # time.sleep(1)
     # pump.capi_close()
 
 
@@ -240,10 +252,10 @@ def decorator_parallel_executor(func):
 @decorator_parallel_executor
 def multi_thread_test(pump: SyringePump):
     pump.initialize()
-    pump.pressure_monitor()
+    # pump.pressure_monitor()
     pump.si_units()
 
-    # pump.aspirate()
+    pump.aspirate(0.1, 0.005)
     # pump.dispense()
     # pump.pump_volume()
     # pump.generate_flow()
@@ -273,9 +285,9 @@ if __name__ == "__main__":
     pump7 = SyringePump("Nemesys_M_7_Pump", 24)
     pump8 = SyringePump("Nemesys_M_8_Pump", 30)
 
-    # test(pump3)
+    test(pump6)
 
-    # multi_thread_test(pump3)
+    # multi_thread_test(pump6)
     # time.sleep(0.01)
     # # multi_thread_test(pump4)
     # # time.sleep(0.001)

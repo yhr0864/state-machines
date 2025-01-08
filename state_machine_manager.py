@@ -62,7 +62,7 @@ class StateMachineLoader:
                     ignore_invalid_triggers=config["settings"][
                         "ignore_invalid_triggers"
                     ],
-                    auto_transitions=False,  # Prevent auto-transition method creation
+                    auto_transitions=False,
                     port=config["settings"]["port"],
                 )
                 self.hardware = Hardware()
