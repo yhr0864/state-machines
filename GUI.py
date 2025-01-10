@@ -1,232 +1,188 @@
-from PyQt6.QtCore import QDateTime, Qt, QTimer
-from PyQt6.QtWidgets import (
-    QApplication,
-    QCheckBox,
-    QComboBox,
-    QDateTimeEdit,
-    QDial,
-    QDialog,
-    QGridLayout,
-    QGroupBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QProgressBar,
-    QPushButton,
-    QRadioButton,
-    QScrollBar,
-    QSizePolicy,
-    QSlider,
-    QSpinBox,
-    QStyleFactory,
-    QTableWidget,
-    QTabWidget,
-    QTextEdit,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6 import QtCore, QtWidgets
+from PyQt6.QtWidgets import QFileDialog
 
 
-class WidgetGallery(QDialog):
-    def __init__(self, parent=None):
-        super(WidgetGallery, self).__init__(parent)
+class MainWindow(QtWidgets.QWidget):
+    def __init__(self, rows=3, cols=3, button_size=100):
+        super().__init__()
+        self.rows = rows
+        self.cols = cols
+        self.button_size = button_size
 
-        self.originalPalette = QApplication.palette()
+        # Main layout
+        self.main_layout = QtWidgets.QGridLayout(self)
 
-        styleComboBox = QComboBox()
-        styleComboBox.addItems(QStyleFactory.keys())
+        # Grid layout for bottle buttons
+        self.grid_layout = QtWidgets.QGridLayout()
+        self.main_layout.addLayout(self.grid_layout, 0, 0, 1, 2)
 
-        styleLabel = QLabel("&Style:")
-        styleLabel.setBuddy(styleComboBox)
+        # Create a vertical layout for the right boxes
+        self.right_vertical_layout = QtWidgets.QVBoxLayout()
+        self.main_layout.addLayout(self.right_vertical_layout, 1, 1)
 
-        self.useStylePaletteCheckBox = QCheckBox("&Use style's standard palette")
-        self.useStylePaletteCheckBox.setChecked(True)
+        # Create the top-right group box
+        self.top_right_group_box = QtWidgets.QGroupBox("Current State", self)
+        self.create_top_right_box()
+        self.right_vertical_layout.addWidget(self.top_right_group_box)
 
-        disableWidgetsCheckBox = QCheckBox("&Disable widgets")
+        # Create the bottom-right group box
+        self.bottom_right_group_box = QtWidgets.QGroupBox("Bottle Information", self)
+        self.create_bottom_right_box()
+        self.right_vertical_layout.addWidget(self.bottom_right_group_box)
 
-        self.createTopLeftGroupBox()
-        self.createTopRightGroupBox()
-        self.createBottomLeftTabWidget()
-        self.createBottomRightGroupBox()
-        self.createProgressBar()
+        # Create a QGroupBox to hold the 3x3 grid of bottle buttons
+        self.button_group_box = QtWidgets.QGroupBox("Tray", self)
+        self.create_group_box()
+        self.main_layout.addWidget(self.button_group_box, 1, 0)
 
-        styleComboBox.textActivated.connect(self.changeStyle)
-        self.useStylePaletteCheckBox.toggled.connect(self.changePalette)
-        disableWidgetsCheckBox.toggled.connect(self.topLeftGroupBox.setDisabled)
-        disableWidgetsCheckBox.toggled.connect(self.topRightGroupBox.setDisabled)
-        disableWidgetsCheckBox.toggled.connect(self.bottomLeftTabWidget.setDisabled)
-        disableWidgetsCheckBox.toggled.connect(self.bottomRightGroupBox.setDisabled)
+        # Create bottom layout with QLineEdit and QPushButton
+        self.create_bottom_bar()
 
-        topLayout = QHBoxLayout()
-        topLayout.addWidget(styleLabel)
-        topLayout.addWidget(styleComboBox)
-        topLayout.addStretch(1)
-        topLayout.addWidget(self.useStylePaletteCheckBox)
-        topLayout.addWidget(disableWidgetsCheckBox)
+    def create_top_right_box(self):
+        """Create the top-right group box."""
+        layout = QtWidgets.QVBoxLayout(self.top_right_group_box)
+        label = QtWidgets.QLabel("This is the top-right group box", self)
+        layout.addWidget(label)
+        self.top_right_group_box.setLayout(layout)
 
-        mainLayout = QGridLayout()
-        mainLayout.addLayout(topLayout, 0, 0, 1, 2)
-        mainLayout.addWidget(self.topLeftGroupBox, 1, 0)
-        mainLayout.addWidget(self.topRightGroupBox, 1, 1)
-        mainLayout.addWidget(self.bottomLeftTabWidget, 2, 0)
-        mainLayout.addWidget(self.bottomRightGroupBox, 2, 1)
-        mainLayout.addWidget(self.progressBar, 3, 0, 1, 2)
-        mainLayout.setRowStretch(1, 1)
-        mainLayout.setRowStretch(2, 1)
-        mainLayout.setColumnStretch(0, 1)
-        mainLayout.setColumnStretch(1, 1)
-        self.setLayout(mainLayout)
-
-        self.setWindowTitle("Styles")
-        self.changeStyle("Windows")
-
-    def changeStyle(self, styleName):
-        QApplication.setStyle(QStyleFactory.create(styleName))
-        self.changePalette()
-
-    def changePalette(self):
-        if self.useStylePaletteCheckBox.isChecked():
-            QApplication.setPalette(QApplication.style().standardPalette())
-        else:
-            QApplication.setPalette(self.originalPalette)
-
-    def advanceProgressBar(self):
-        curVal = self.progressBar.value()
-        maxVal = self.progressBar.maximum()
-        self.progressBar.setValue(curVal + (maxVal - curVal) // 100)
-
-    def createTopLeftGroupBox(self):
-        self.topLeftGroupBox = QGroupBox("Group 1")
-
-        radioButton1 = QRadioButton("Radio button 1")
-        radioButton2 = QRadioButton("Radio button 2")
-        radioButton3 = QRadioButton("Radio button 3")
-        radioButton1.setChecked(True)
-
-        checkBox = QCheckBox("Tri-state check box")
-        checkBox.setTristate(True)
-        checkBox.setCheckState(Qt.CheckState.PartiallyChecked)
-
-        layout = QVBoxLayout()
-        layout.addWidget(radioButton1)
-        layout.addWidget(radioButton2)
-        layout.addWidget(radioButton3)
-        layout.addWidget(checkBox)
-        layout.addStretch(1)
-        self.topLeftGroupBox.setLayout(layout)
-
-    def createTopRightGroupBox(self):
-        self.topRightGroupBox = QGroupBox("Group 2")
-
-        defaultPushButton = QPushButton("Default Push Button")
-        defaultPushButton.setDefault(True)
-
-        togglePushButton = QPushButton("Toggle Push Button")
-        togglePushButton.setCheckable(True)
-        togglePushButton.setChecked(True)
-
-        flatPushButton = QPushButton("Flat Push Button")
-        flatPushButton.setFlat(True)
-
-        layout = QVBoxLayout()
-        layout.addWidget(defaultPushButton)
-        layout.addWidget(togglePushButton)
-        layout.addWidget(flatPushButton)
-        layout.addStretch(1)
-        self.topRightGroupBox.setLayout(layout)
-
-    def createBottomLeftTabWidget(self):
-        self.bottomLeftTabWidget = QTabWidget()
-        self.bottomLeftTabWidget.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Ignored
+    def create_bottom_right_box(self):
+        """Create the bottom-right group box."""
+        layout = QtWidgets.QVBoxLayout(self.bottom_right_group_box)
+        self.bottom_right_label = QtWidgets.QLabel(
+            "This is the bottom-right group box", self
         )
+        layout.addWidget(self.bottom_right_label)
+        self.bottom_right_group_box.setLayout(layout)
 
-        tab1 = QWidget()
-        tableWidget = QTableWidget(10, 10)
+    def create_group_box(self):
+        """Create the QGroupBox with 3x3 bottle buttons."""
+        grid_layout = QtWidgets.QGridLayout(self.button_group_box)
+        self.button_group_box.setLayout(grid_layout)
 
-        tab1hbox = QHBoxLayout()
-        tab1hbox.setContentsMargins(5, 5, 5, 5)
-        tab1hbox.addWidget(tableWidget)
-        tab1.setLayout(tab1hbox)
+        """
+        0:100 1:99 2:98 3:97 4:96 5:95 6:94 7:93 8:92 9:91
+        10:90 
+        20:80
+        
+        """
 
-        tab2 = QWidget()
-        textEdit = QTextEdit()
+        for row in range(self.rows):
+            for col in range(self.cols):
+                # Create button
+                button = self.create_button(
+                    f"{row*10+col}:{self.rows*self.cols-(row*10+col)}"
+                )
+                # Create line edit
+                lineEdit = self.create_line_edit()
 
-        textEdit.setPlainText(
-            "Twinkle, twinkle, little star,\n"
-            "How I wonder what you are.\n"
-            "Up above the world so high,\n"
-            "Like a diamond in the sky.\n"
-            "Twinkle, twinkle, little star,\n"
-            "How I wonder what you are!\n"
+                # Add to grid layout
+                self.grid_layout.addWidget(button, row, col)
+                self.grid_layout.addWidget(lineEdit, row, col)
+
+                # Connect signals
+                button.clicked.connect(self.create_edit_handler(button, lineEdit))
+                lineEdit.editingFinished.connect(self.update_bottom_right_box(lineEdit))
+                lineEdit.editingFinished.connect(
+                    self.create_edit_handler(lineEdit, button, reverse=True)
+                )
+
+                # Add the button to the grid layout
+                grid_layout.addWidget(button, row, col)
+                grid_layout.addWidget(lineEdit, row, col)
+
+    def update_bottom_right_box(self, lineEdit):
+        def handler():
+            entered_text = lineEdit.text()
+            self.bottom_right_label.setText(entered_text)
+
+        return handler
+
+    def create_bottom_bar(self):
+        """Create a bottom bar with QLineEdit and QPushButton."""
+        # Bottom layout
+        bottom_layout = QtWidgets.QHBoxLayout()
+        self.main_layout.addLayout(bottom_layout, 3, 0, 1, 2)
+
+        # Add QLineEdit
+        self.bottom_line_edit = QtWidgets.QLineEdit(self)
+        bottom_layout.addWidget(self.bottom_line_edit)
+
+        # Add QPushButton
+        self.bottom_button = QtWidgets.QPushButton("Save", self)
+        bottom_layout.addWidget(self.bottom_button)
+
+        # Connect the button's clicked signal
+        self.bottom_button.clicked.connect(self.on_bottom_button_click)
+
+    def on_bottom_button_click(self):
+        """Handle the click event of the bottom button."""
+
+        # Open a file dialog to select where to save the file
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save File", "", "Text Files (*.txt);;All Files (*)"
         )
+        if file_path:  # If the user selects a file path
+            try:
+                with open(file_path, "w") as file:
+                    file.write(self.bottom_line_edit.text())  # Save the text content
+                QtWidgets.QMessageBox.information(
+                    self, "Success", "File saved successfully!"
+                )
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self, "Error", f"Could not save file: {e}"
+                )
 
-        tab2hbox = QHBoxLayout()
-        tab2hbox.setContentsMargins(5, 5, 5, 5)
-        tab2hbox.addWidget(textEdit)
-        tab2.setLayout(tab2hbox)
+    def create_button(self, text):
+        """Create a QPushButton with a circular style."""
+        button = QtWidgets.QPushButton(text, self)
+        button.setMinimumSize(QtCore.QSize(self.button_size, self.button_size))
+        button.setMaximumSize(QtCore.QSize(self.button_size, self.button_size))
+        button.setStyleSheet(
+            f"""
+            QPushButton {{
+                border: none;
+                border-radius: {self.button_size // 2}px;  /* Half of the diameter for circular shape */
+                background-color: #6495ED;
+                color: white;
+                font-size: 16px;
+            }}
+            QPushButton:hover {{
+                background-color: #4169E1;
+            }}
+            """
+        )
+        return button
 
-        self.bottomLeftTabWidget.addTab(tab1, "&Table")
-        self.bottomLeftTabWidget.addTab(tab2, "Text &Edit")
+    def create_line_edit(self):
+        """Create a QLineEdit that is hidden initially."""
+        lineEdit = QtWidgets.QLineEdit(self)
+        lineEdit.setHidden(True)
+        return lineEdit
 
-    def createBottomRightGroupBox(self):
-        self.bottomRightGroupBox = QGroupBox("Group 3")
-        self.bottomRightGroupBox.setCheckable(True)
-        self.bottomRightGroupBox.setChecked(True)
+    def create_edit_handler(self, source_widget, target_widget, reverse=False):
+        """Create a handler to toggle between QPushButton and QLineEdit."""
 
-        lineEdit = QLineEdit("s3cRe7")
-        lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
+        def handler():
+            if reverse:  # When editing is finished
+                target_widget.setText(source_widget.text())
+                source_widget.setHidden(True)
+                target_widget.setHidden(False)
+            else:  # When button is clicked
+                target_widget.setText(source_widget.text())
+                source_widget.setHidden(True)
+                target_widget.setHidden(False)
+                target_widget.setFocus()
 
-        spinBox = QSpinBox(self.bottomRightGroupBox)
-        spinBox.setValue(50)
-
-        dateTimeEdit = QDateTimeEdit(self.bottomRightGroupBox)
-        dateTimeEdit.setDateTime(QDateTime.currentDateTime())
-
-        slider = QSlider(Qt.Orientation.Horizontal, self.bottomRightGroupBox)
-        slider.setValue(40)
-
-        scrollBar = QScrollBar(Qt.Orientation.Horizontal, self.bottomRightGroupBox)
-        scrollBar.setValue(60)
-
-        dial = QDial(self.bottomRightGroupBox)
-        dial.setValue(30)
-        dial.setNotchesVisible(True)
-
-        layout = QGridLayout()
-        layout.addWidget(lineEdit, 0, 0, 1, 2)
-        layout.addWidget(spinBox, 1, 0, 1, 2)
-        layout.addWidget(dateTimeEdit, 2, 0, 1, 2)
-        layout.addWidget(slider, 3, 0)
-        layout.addWidget(scrollBar, 4, 0)
-        layout.addWidget(dial, 3, 1, 2, 1)
-        layout.setRowStretch(5, 1)
-        self.bottomRightGroupBox.setLayout(layout)
-
-    def createProgressBar(self):
-        self.progressBar = QProgressBar()
-        self.progressBar.setRange(0, 10000)
-        self.progressBar.setValue(0)
-
-        timer = QTimer(self)
-        timer.timeout.connect(self.advanceProgressBar)
-        timer.start(1000)
+        return handler
 
 
 if __name__ == "__main__":
-
     import sys
 
-    app = QApplication(sys.argv)
-    gallery = WidgetGallery()
-    gallery.show()
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow(rows=10, cols=10, button_size=40)
+    window.setWindowTitle("Custom Button Grid with Bottom Bar")
+    window.resize(400, 400)
+    window.show()
     sys.exit(app.exec())
-
-    # app = QApplication([])
-    # window = QWidget()
-    # layout = QVBoxLayout()
-    # layout.addWidget(QPushButton("Top"))
-    # layout.addWidget(QPushButton("Bottom"))
-    # window.setLayout(layout)
-    # window.show()
-    # app.exec()
