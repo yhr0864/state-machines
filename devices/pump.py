@@ -9,13 +9,20 @@ from pump_lib.qmixsdk import qmixanalogio
 
 class SyringePump(unittest.TestCase):
     _bus_opened = False
-    _bus_closed = False
 
-    def __init__(self, pump_name, pressure_limit):
+    def __init__(
+        self,
+        pump_name: str,
+        pressure_limit: float,
+        inner_diameter_mm: float,
+        max_piston_stroke_mm: float,
+    ):
         super().__init__()
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.deviceconfig = os.path.join(script_dir, "pump_lib/PumpConfig")
         self.pressure_limit = pressure_limit
+        self.inner_diameter_mm = inner_diameter_mm
+        self.max_piston_stroke_mm = max_piston_stroke_mm
 
         # Make sure bus only opened once
         if not self._bus_opened:
@@ -51,6 +58,9 @@ class SyringePump(unittest.TestCase):
             self.pump.enable(True)
         self.assertTrue(self.pump.is_enabled())
 
+        # Set Syringe Parameters.
+        self.pump.set_syringe_param(self.inner_diameter_mm, self.max_piston_stroke_mm)
+
         # Check Valves
         if not self.pump.has_valve():
             raise ModuleNotFoundError("no valve installed")
@@ -58,7 +68,10 @@ class SyringePump(unittest.TestCase):
 
         # Ckeck if pressuren sensor works
         self.current_pressure_sensor_status = self.pressure_channel.read_status()
+        self.pressure_channel.enable_software_scaling(True)
+        self.pressure_channel.set_scaling_param(0.05, -25)
         print(f"Current sensor status: {self.current_pressure_sensor_status}")
+        print(f'Current scaling factors: {self.pressure_channel.get_scaling_param()}')
 
         ##########################################
         # Only test for all the channel info
@@ -67,10 +80,8 @@ class SyringePump(unittest.TestCase):
         self.ch1.lookup_channel_by_name(f"{self.pump_name[:-5]}_ForceSensor")
         print(f"Current force: {self.ch1.read_input()}")
 
-
         print(f"current level: {self.pump.get_fill_level()}")
         print(f"current flow: {self.pump.get_flow_is} {self.pump.get_flow_unit}")
-        
 
     def wait_dosage_finished(self, timeout_seconds):
         """
@@ -81,15 +92,17 @@ class SyringePump(unittest.TestCase):
         timer = qmixbus.PollingTimer(timeout_seconds * 1000)
         message_timer = qmixbus.PollingTimer(500)
         result = True
-        while (result == True) and not timer.is_expired():
+        while result:
+            if timer.is_expired():
+                raise TimeoutError("Timeout!")
             # Monitor the force if it is below the threshold
             current_pressure = self.pressure_channel.read_input()
-            # if current_pressure >= self.pressure_limit:
-            #     print(
-            #         f"Warning: Current pressure {current_pressure} is over the limit. Pump stops!"
-            #     )
-            #     self.pump.stop_pumping()
-            #     break
+            if current_pressure >= self.pressure_limit:
+                print(
+                    f"Warning: Current pressure {current_pressure} is over the limit. Pump stops!"
+                )
+                self.pump.stop_pumping()
+                break
 
             time.sleep(0.1)
             if message_timer.is_expired():
@@ -152,15 +165,14 @@ class SyringePump(unittest.TestCase):
         self.assertEqual(True, self.finished)
         return self.finished
 
-    def refill(self):
+    def refill(self, flow):
         self.switch_valve_to(1)
-        flow = 0 - self.pump.get_flow_rate_max() / 10
+        flow = 0 - flow
         self.finished = self.generate_flow(flow)
         return self.finished
 
-    def empty(self):
+    def empty(self, flow):
         self.switch_valve_to(2)
-        flow = self.pump.get_flow_rate_max() / 10
         self.finished = self.generate_flow(flow)
         return self.finished
 
@@ -173,7 +185,7 @@ class SyringePump(unittest.TestCase):
         """
 
         self.pump.generate_flow(flow)
-        self.finished = self.wait_dosage_finished(30)
+        self.finished = self.wait_dosage_finished(260)
         self.assertEqual(True, self.finished)
         return self.finished
 
@@ -203,11 +215,11 @@ class SyringePump(unittest.TestCase):
 
     def capi_close(self):
         # Make sure bus only closed once
-        if not self._bus_closed:
+        if self._bus_opened:
             print("Closing bus...")
             self.bus.stop()
             self.bus.close()
-            self.__class__._bus_closed = True
+            self.__class__._bus_opened = True
             print("Bus closed")
         else:
             print("Bus closed")
@@ -215,11 +227,12 @@ class SyringePump(unittest.TestCase):
 
 def test(pump: SyringePump):
     pump.initialize()
-    pump.pressure_monitor()
+    # pump.pressure_monitor()
     pump.si_units()
-    
-    # pump.aspirate(0.5, 0.005)
+
+    # pump.aspirate(1, 0.05)
     # pump.dispense(0.5, 0.005)
+    pump.empty(0.1)
     # pump.pump_volume()
     # pump.generate_flow()
     # pump.set_syringe_level()  # Test with this one first
@@ -255,7 +268,7 @@ def multi_thread_test(pump: SyringePump):
     # pump.pressure_monitor()
     pump.si_units()
 
-    pump.aspirate(0.1, 0.005)
+    pump.aspirate(1, 0.05)
     # pump.dispense()
     # pump.pump_volume()
     # pump.generate_flow()
@@ -271,19 +284,19 @@ def multi_thread_test(pump: SyringePump):
     # time.sleep(2)
     # pump.switch_valve_to(3)
     # time.sleep(2)
-    pump.capi_close()
+    # pump.capi_close()
 
 
 if __name__ == "__main__":
 
-    pump1 = SyringePump("Nemesys_M_1_Pump", 30)
-    pump2 = SyringePump("Nemesys_M_2_Pump", 30)
-    pump3 = SyringePump("Nemesys_M_3_Pump", 12)
-    pump4 = SyringePump("Nemesys_M_4_Pump", 12)
-    pump5 = SyringePump("Nemesys_M_5_Pump", 12)
-    pump6 = SyringePump("Nemesys_M_6_Pump", 24)
-    pump7 = SyringePump("Nemesys_M_7_Pump", 24)
-    pump8 = SyringePump("Nemesys_M_8_Pump", 30)
+    pump1 = SyringePump("Nemesys_M_1_Pump", 10, 14.70520755382068, 60)
+    pump2 = SyringePump("Nemesys_M_2_Pump", 10, 14.70520755382068, 60)
+    pump3 = SyringePump("Nemesys_M_3_Pump", 10, 32.80671055737278, 60)
+    pump4 = SyringePump("Nemesys_M_4_Pump", 10, 32.80671055737278, 60)
+    pump5 = SyringePump("Nemesys_M_5_Pump", 10, 23.207658393177034, 60)
+    pump6 = SyringePump("Nemesys_M_6_Pump", 10, 23.207658393177034, 60)
+    pump7 = SyringePump("Nemesys_M_7_Pump", 10, 23.207658393177034, 60)
+    pump8 = SyringePump("Nemesys_M_8_Pump", 10, 10.40522314849599, 60)
 
     test(pump6)
 

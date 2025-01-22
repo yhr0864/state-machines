@@ -12,6 +12,14 @@ class MainWindow(QtWidgets.QWidget):
         # Main layout
         self.main_layout = QtWidgets.QGridLayout(self)
 
+        # Grid layout for bottle buttons
+        # self.grid_layout = QtWidgets.QGridLayout()
+        # self.main_layout.addLayout(self.grid_layout, 0, 0)
+
+        # # Create a vertical layout for the right boxes
+        # self.right_vertical_layout = QtWidgets.QVBoxLayout()
+        # self.main_layout.addLayout(self.right_vertical_layout, 1, 1)
+
         # Create the top-right group box
         self.top_right_group_box = QtWidgets.QGroupBox("Current State", self)
         self.create_top_right_box()

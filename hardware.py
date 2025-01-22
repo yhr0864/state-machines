@@ -24,14 +24,14 @@ class Hardware:
     def __init__(self):
         # self.gantry = Gantry()
         # self.arduino = ArduinoBoard()
-        # self.pump1 = SyringePump("Nemesys_M_1_Pump")
-        # self.pump2 = SyringePump("Nemesys_M_2_Pump")
-        # self.pump3 = SyringePump("Nemesys_M_3_Pump")
-        # self.pump4 = SyringePump("Nemesys_M_4_Pump")
-        # self.pump5 = SyringePump("Nemesys_M_5_Pump")
-        # self.pump6 = SyringePump("Nemesys_M_6_Pump")
-        # self.pump7 = SyringePump("Nemesys_M_7_Pump")
-        # self.pump8 = SyringePump("Nemesys_M_8_Pump")
+        # self.pump1 = SyringePump("Nemesys_M_1_Pump", 10, 14.70520755382068, 60)
+        # self.pump2 = SyringePump("Nemesys_M_2_Pump", 10, 14.70520755382068, 60)
+        # self.pump3 = SyringePump("Nemesys_M_3_Pump", 10, 32.80671055737278, 60)
+        # self.pump4 = SyringePump("Nemesys_M_4_Pump", 10, 32.80671055737278, 60)
+        # self.pump5 = SyringePump("Nemesys_M_5_Pump", 10, 23.207658393177034, 60)
+        # self.pump6 = SyringePump("Nemesys_M_6_Pump", 10, 23.207658393177034, 60)
+        # self.pump7 = SyringePump("Nemesys_M_7_Pump", 10, 23.207658393177034, 60)
+        # self.pump8 = SyringePump("Nemesys_M_8_Pump", 10, 10.40522314849599, 60)
 
         # self.dls = DLS_Analyzer()
         pass
@@ -42,6 +42,13 @@ class Hardware:
         # self.dls.initialize()
         # self.pump1.initialize()
         # self.pump2.initialize()
+        # self.pump3.initialize()
+        # self.pump4.initialize()
+        # self.pump5.initialize()
+        # self.pump6.initialize()
+        # self.pump7.initialize()
+        # self.pump8.initialize()
+
         print("hardwares are initializing")
 
     @decorator_parallel_executor
