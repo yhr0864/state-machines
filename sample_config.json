@@ -1,0 +1,21 @@
+{   
+    "num_samples": 50,
+    "out_flow": 0.01,
+    
+    "1": {
+        "position": [0, 0],
+        "volume": 10,
+        "proportion": [50, 50],
+        "solution": ["s1", "s2"],
+        "pumps": ["pump2", "pump6"],
+        "property": "empty"
+    },
+    "2": {
+        "position": [0, 1],
+        "volume": 10,
+        "proportion": [25, 75],
+        "solution": ["s2", "s3"],
+        "pumps": ["pump2", "pump3"],
+        "property": "empty"
+    }
+}

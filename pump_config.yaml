@@ -1,0 +1,32 @@
+# pump1:
+#    solvent: "s1"
+#    concentration: " "
+#    flow: 0.01
+pump2:
+   solvent: "s2"
+   concentration: " "
+   flow: 0.01
+# pump3:
+#    solvent: "s3"
+#    concentration: " "
+#    flow: 0.008
+# pump4:
+#    solvent: "s2"
+#    concentration: " "
+#    flow: 0.005
+# pump5:
+#    solvent: "s2"
+#    concentration: " "
+#    flow: 0.005
+pump6:
+   solvent: "s2"
+   concentration: " "
+   flow: 0.01
+# pump7:
+#    solvent: "s2"
+#    concentration: " "
+#    flow: 0.005
+# pump8:
+#    solvent: "s2"
+#    concentration: " "
+#    flow: 0.005

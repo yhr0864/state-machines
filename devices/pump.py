@@ -2,9 +2,9 @@ import os
 import time
 
 import unittest
-from pump_lib.qmixsdk import qmixbus
-from pump_lib.qmixsdk import qmixpump
-from pump_lib.qmixsdk import qmixanalogio
+from devices.pump_lib.qmixsdk import qmixbus
+from devices.pump_lib.qmixsdk import qmixpump
+from devices.pump_lib.qmixsdk import qmixanalogio
 
 
 class SyringePump(unittest.TestCase):
@@ -43,7 +43,7 @@ class SyringePump(unittest.TestCase):
 
         self.finished = None
 
-    def initialize(self):
+    def initialize(self, vol_unit_prefix=qmixpump.UnitPrefix.milli):
         # Empty the air ? Here or in the hardware.py
         # OOP problem: if for all the pump experiment in the future, "Empty the air" is always necessary, then put it here
 
@@ -65,23 +65,31 @@ class SyringePump(unittest.TestCase):
         if not self.pump.has_valve():
             raise ModuleNotFoundError("no valve installed")
         self.valve = self.pump.get_valve()
+        self.switch_valve_to(0)
 
         # Ckeck if pressuren sensor works
         self.current_pressure_sensor_status = self.pressure_channel.read_status()
         self.pressure_channel.enable_software_scaling(True)
         self.pressure_channel.set_scaling_param(0.05, -25)
         print(f"Current sensor status: {self.current_pressure_sensor_status}")
-        print(f'Current scaling factors: {self.pressure_channel.get_scaling_param()}')
+        print(f"Current scaling factors: {self.pressure_channel.get_scaling_param()}")
 
-        ##########################################
-        # Only test for all the channel info
-        ##########################################
-        self.ch1 = qmixanalogio.AnalogInChannel()
-        self.ch1.lookup_channel_by_name(f"{self.pump_name[:-5]}_ForceSensor")
-        print(f"Current force: {self.ch1.read_input()}")
+        """
+        Setup the unit for volume and flow rate
+        """
 
-        print(f"current level: {self.pump.get_fill_level()}")
-        print(f"current flow: {self.pump.get_flow_is} {self.pump.get_flow_unit}")
+        print("Testing SI units...")
+        self.pump.set_volume_unit(vol_unit_prefix, qmixpump.VolumeUnit.litres)
+        max_ml = self.pump.get_volume_max()
+        print("Max. volume ml: ", max_ml, self.pump.get_volume_unit())
+
+        self.pump.set_flow_unit(
+            vol_unit_prefix,
+            qmixpump.VolumeUnit.litres,
+            qmixpump.TimeUnit.per_second,
+        )
+        max_ml_s = self.pump.get_flow_rate_max()
+        print("Max. flow ml/s: ", max_ml_s, self.pump.get_flow_unit())
 
     def wait_dosage_finished(self, timeout_seconds):
         """
@@ -107,22 +115,12 @@ class SyringePump(unittest.TestCase):
             time.sleep(0.1)
             if message_timer.is_expired():
                 print(
-                    f" Dosed volume: {self.pump.get_dosed_volume()}, Flow rate: {self.pump.get_flow_is()}, \
-                    Fill level: {self.pump.get_fill_level()}, Current pressure: {current_pressure:.2f}"
+                    f"{self.pump_name} - Dosed vol.: {self.pump.get_dosed_volume():.6f}, Flow rate: {self.pump.get_flow_is():.6f}, Fill level: {self.pump.get_fill_level():.6f}, Current pressure: {current_pressure:.2f}"
                 )
                 message_timer.restart()
 
             result = self.pump.is_pumping()
         return not result
-
-    def pressure_monitor(self):
-        # Test this to ensure the unit of pressure: bar?
-        pressure_channel = qmixanalogio.AnalogInChannel()
-        pressure_channel.lookup_channel_by_name(f"{self.pump_name[:-5]}_AnIN1")
-        current_pressure = pressure_channel.read_status()
-        print(f"Current status: {current_pressure}")
-        print(f"Current pressure: {current_pressure:.2f}")
-        return current_pressure
 
     def si_units(self):
         """
@@ -150,8 +148,9 @@ class SyringePump(unittest.TestCase):
         self.switch_valve_to(1)
         self.pump.aspirate(volume, flow)
 
-        self.finished = self.wait_dosage_finished(30)
+        self.finished = self.wait_dosage_finished(600)
         self.assertEqual(True, self.finished)
+        self.switch_valve_to(0)
         return self.finished
 
     def dispense(self, volume, flow):
@@ -161,19 +160,22 @@ class SyringePump(unittest.TestCase):
 
         self.switch_valve_to(2)
         self.pump.dispense(volume, flow)
-        self.finished = self.wait_dosage_finished(30)
+        self.finished = self.wait_dosage_finished(600)
         self.assertEqual(True, self.finished)
+        self.switch_valve_to(0)
         return self.finished
 
     def refill(self, flow):
         self.switch_valve_to(1)
         flow = 0 - flow
         self.finished = self.generate_flow(flow)
+        self.switch_valve_to(0)
         return self.finished
 
     def empty(self, flow):
         self.switch_valve_to(2)
         self.finished = self.generate_flow(flow)
+        self.switch_valve_to(0)
         return self.finished
 
     def generate_flow(self, flow):  # get deviation
@@ -185,7 +187,7 @@ class SyringePump(unittest.TestCase):
         """
 
         self.pump.generate_flow(flow)
-        self.finished = self.wait_dosage_finished(260)
+        self.finished = self.wait_dosage_finished(1200)
         self.assertEqual(True, self.finished)
         return self.finished
 
@@ -232,7 +234,7 @@ def test(pump: SyringePump):
 
     # pump.aspirate(1, 0.05)
     # pump.dispense(0.5, 0.005)
-    pump.empty(0.1)
+    pump.empty(0.05)
     # pump.pump_volume()
     # pump.generate_flow()
     # pump.set_syringe_level()  # Test with this one first
@@ -268,7 +270,7 @@ def multi_thread_test(pump: SyringePump):
     # pump.pressure_monitor()
     pump.si_units()
 
-    pump.aspirate(1, 0.05)
+    pump.empty(0.05)
     # pump.dispense()
     # pump.pump_volume()
     # pump.generate_flow()
@@ -298,10 +300,10 @@ if __name__ == "__main__":
     pump7 = SyringePump("Nemesys_M_7_Pump", 10, 23.207658393177034, 60)
     pump8 = SyringePump("Nemesys_M_8_Pump", 10, 10.40522314849599, 60)
 
-    test(pump6)
+    # test(pump6)
 
-    # multi_thread_test(pump6)
-    # time.sleep(0.01)
-    # # multi_thread_test(pump4)
+    multi_thread_test(pump6)
+    time.sleep(0.01)
+    multi_thread_test(pump2)
     # # time.sleep(0.001)
     # multi_thread_test(pump7)

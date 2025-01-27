@@ -13,7 +13,7 @@ class StateMachine:
             model=self,
             states=states,
             transitions=transitions,
-            initial="initialize",
+            initial="before_cycle_stage_1",
             name="Micro Fluidic System",
             ignore_invalid_triggers=True,
             auto_transitions=False,
@@ -25,10 +25,18 @@ class StateMachine:
 
     def initialize(self):
         # Initialize all the hardwares
-        # Hardware.initialize()
+        # self.hardware.initialize()
 
         # transition
-        self.trigger("initialize_finished")
+        pass
+        # self.trigger("initialize_finished")
+
+    def pump_preparing(self):
+        # Prepare all the pumps (refill)
+        # self.hardware.prepare_pump()
+
+        # transition
+        self.trigger("command_finished")
 
     def before_cycle_stage_1(self):
         # Send command
@@ -48,8 +56,10 @@ class StateMachine:
 
     def before_cycle_stage_3(self):
         # Send command
-        # Hardware.fill_bottle()
-        # Hardware.tray_to_pump()
+        # future1 = self.hardware.fill_bottle()
+        # future2 = self.hardware.tray_to_pump()
+        # future1.result()
+        # future2.result()
         # time.sleep(1)
 
         # transition
